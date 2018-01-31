@@ -19,6 +19,10 @@ type InkMiner struct {
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
+func (i *InkMiner) InitConnection(req *int, resp *int) error {
+	return nil
+}
+
 func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) {
 	localIP := "127.0.0.1"
 

@@ -204,6 +204,10 @@ func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, sett
 		client:  client,
 		privKey: privKey,
 	}
-	// TODO: Make RPC call to InkMiner and get canvas setting
+	/*
+			  TODO: Make RPC call to InkMiner and get canvas settings.
+
+		    Something like: client.Call("InkMiner.InitConnection", args, &resp)
+	*/
 	return artNode, CanvasSettings{}, DisconnectedError("")
 }
