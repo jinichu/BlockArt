@@ -7,8 +7,11 @@ library (blockartlib) to be used in project 1 of UBC CS 416 2017W2.
 
 package blockartlib
 
-import "crypto/ecdsa"
-import "fmt"
+import (
+	"crypto/ecdsa"
+	"fmt"
+	"net/rpc"
+)
 
 // Represents a type of shape in the BlockArt system.
 type ShapeType int
@@ -193,7 +196,14 @@ type Canvas interface {
 // Can return the following errors:
 // - DisconnectedError
 func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, setting CanvasSettings, err error) {
-	// TODO
-	// For now return DisconnectedError
-	return nil, CanvasSettings{}, DisconnectedError("")
+	client, err := rpc.DialHTTP("tcp", minerAddr)
+	if err != nil {
+		return nil, CanvasSettings{}, err
+	}
+	artNode := &ArtNode{
+		client:  client,
+		privKey: privKey,
+	}
+	// TODO: Make RPC call to InkMiner and get canvas setting
+	return artNode, CanvasSettings{}, DisconnectedError("")
 }

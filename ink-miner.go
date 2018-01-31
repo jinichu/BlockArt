@@ -1,10 +1,16 @@
 package main
 
-import "os"
+import (
+	"os"
+
+	"./blockartlib"
+)
 
 func main() {
 	args := os.Args[1:]
 	serverAddr := args[0]
-	pubKey := args[1]
-	privKey := args[2]
+	pubKeyFile := args[1]
+	privKeyFile := args[2]
+
+	blockartlib.RunInkMiner(serverAddr, pubKeyFile, privKeyFile)
 }
