@@ -13,3 +13,8 @@ func (i *InkMiner) InitConnection(req *ecdsa.PublicKey, resp *CanvasSettings) er
 	*resp = i.settings.canvasSettings
 	return nil
 }
+
+func (i *InkMiner) AddShape(req *Operation, resp *int) error {
+	i.floodOperation(req)
+	return nil
+}
