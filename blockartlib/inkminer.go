@@ -16,6 +16,7 @@ type InkMiner struct {
 	privKey    ecdsa.PrivateKey  // Pub/priv key pair of this InkMiner
 	blockchain map[string]*Block // Copy of the blockchain
 	latest     []*Block          // Latest blocks in the blockchain
+	settings   MinerNetSettings  // Settings for this BlockArt network instance
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
@@ -39,7 +40,10 @@ func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) {
 		log.Fatal(err)
 	}
 	inkMiner.client = client
-	// TODO: Do client.Call("Server.Register", args=(localAddr, pubKey),...)
+	/*
+			  TODO: Do client.Call("Server.Register", args=(localAddr, pubKey),...)
+		    to register this InkMiner to the network and get the BlockArt settings
+	*/
 
 	select {}
 }

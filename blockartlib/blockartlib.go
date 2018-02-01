@@ -198,16 +198,17 @@ type Canvas interface {
 func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, setting CanvasSettings, err error) {
 	client, err := rpc.DialHTTP("tcp", minerAddr)
 	if err != nil {
-		return nil, CanvasSettings{}, err
+		return nil, CanvasSettings{}, DisconnectedError(minerAddr)
 	}
 	artNode := &ArtNode{
 		client:  client,
 		privKey: privKey,
 	}
-	/*
-			  TODO: Make RPC call to InkMiner and get canvas settings.
-
-		    Something like: client.Call("InkMiner.InitConnection", args, &resp)
-	*/
-	return artNode, CanvasSettings{}, DisconnectedError("")
+	args := privKey.Public()
+	var resp CanvasSettings
+	err = client.Call("InkMiner.InitConnection", args, &resp)
+	if err != nil {
+		return nil, CanvasSettings{}, err
+	}
+	return artNode, resp, nil
 }
