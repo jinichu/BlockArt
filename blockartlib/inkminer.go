@@ -15,12 +15,8 @@ type InkMiner struct {
 	inkAmount  int               // Amount of ink this InkMiner hash
 	privKey    ecdsa.PrivateKey  // Pub/priv key pair of this InkMiner
 	blockchain map[string]*Block // Copy of the blockchain
-	latest     *Block            // Latest block in the blockchain
+	latest     []*Block          // Latest blocks in the blockchain
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
-}
-
-func (i *InkMiner) InitConnection(req *int, resp *int) error {
-	return nil
 }
 
 func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) {
