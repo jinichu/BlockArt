@@ -11,6 +11,7 @@ import (
 	"../blockartlib"
 	"../crypto"
 	"../server"
+	"../stopper"
 )
 
 type InkMiner struct {
@@ -24,6 +25,7 @@ type InkMiner struct {
 	mineBlockChan chan blockartlib.Block
 	rs            *rpc.Server
 	states        map[string]State // States of the canvas at a given block
+	stopper       *stopper.Stopper
 
 	mu struct {
 		sync.Mutex
@@ -44,6 +46,7 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	inkMiner := &InkMiner{
 		blockchain: make(map[string]*blockartlib.Block),
 		states:     make(map[string]State),
+		stopper:    stopper.New(),
 	}
 	inkMiner.privKey = privKey
 	var err error
@@ -92,6 +95,12 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	}
 
 	for {
+		select {
+		case <-i.stopper.ShouldStop():
+			return nil
+		default:
+		}
+
 		conn, err := l.Accept()
 		if err != nil {
 			log.Printf("Server accept error: %s", err)
@@ -107,6 +116,8 @@ func (i *InkMiner) Listen(serverAddr string) error {
 func (i *InkMiner) Close() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+
+	i.stopper.Stop()
 
 	return i.mu.l.Close()
 }

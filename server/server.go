@@ -7,10 +7,12 @@ import (
 	"sync"
 
 	"../blockartlib"
+	"../stopper"
 )
 
 type Server struct {
-	rs *rpc.Server
+	rs      *rpc.Server
+	stopper *stopper.Stopper
 
 	mu struct {
 		sync.Mutex
@@ -22,7 +24,8 @@ type Server struct {
 
 func New() (*Server, error) {
 	s := &Server{
-		rs: rpc.NewServer(),
+		rs:      rpc.NewServer(),
+		stopper: stopper.New(),
 	}
 
 	s.mu.miners = map[string]string{}
@@ -45,9 +48,15 @@ func (s *Server) Listen(addr string) error {
 	s.mu.Unlock()
 
 	for {
+		select {
+		case <-s.stopper.ShouldStop():
+			return nil
+		default:
+		}
+
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println(err)
+			log.Printf("Server accept error: %s", err)
 			continue
 		}
 		log.Printf("New connection from: %s", conn.RemoteAddr())
@@ -70,6 +79,8 @@ func (s *Server) Addr() string {
 func (s *Server) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	s.stopper.Stop()
 
 	return s.mu.l.Close()
 }
