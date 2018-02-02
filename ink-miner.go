@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"./blockartlib"
@@ -12,5 +13,7 @@ func main() {
 	pubKeyFile := args[1]
 	privKeyFile := args[2]
 
-	blockartlib.RunInkMiner(serverAddr, pubKeyFile, privKeyFile)
+	if err := blockartlib.RunInkMiner(serverAddr, pubKeyFile, privKeyFile); err != nil {
+		log.Fatal(err)
+	}
 }
