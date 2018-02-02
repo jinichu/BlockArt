@@ -2,8 +2,6 @@ package blockartlib
 
 import "crypto/ecdsa"
 
-// InkMiner methods for mining blocks, verifying blocks, and adding blocks to the blockchain
-
 type Block struct {
 	PrevBlock string          // Hash of the previous block
 	BlockNum  int             // Block number

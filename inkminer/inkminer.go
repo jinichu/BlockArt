@@ -20,9 +20,9 @@ type InkMiner struct {
 	blockchain    map[string]*blockartlib.Block // Copy of the blockchain
 	latest        []*blockartlib.Block          // Latest blocks in the blockchain
 	settings      blockartlib.MinerNetSettings  // Settings for this BlockArt network instance
-	shapes        map[string]string             // Map of shape hashes to their SVG string representation
 	currentHead   *blockartlib.Block            // Block that InkMiner is mining on (current head)
 	mineBlockChan chan blockartlib.Block
+	states        map[string]State // States of the canvas at a given block
 
 	mu struct {
 		sync.Mutex
@@ -32,12 +32,18 @@ type InkMiner struct {
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
+type State struct {
+	shapes      map[string]string          // Map of shape hashes to their SVG string representation
+	shapeOwners map[string]ecdsa.PublicKey // Map of shape hashes to their owner (InkMiner PubKey)
+	inkLevels   map[ecdsa.PublicKey]uint32 // Current ink levels of every InkMiner
+}
+
 func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) error {
 	localIP := "127.0.0.1"
 
 	inkMiner := &InkMiner{
 		blockchain: make(map[string]*blockartlib.Block),
-		shapes:     make(map[string]string),
+		states:     make(map[string]State),
 	}
 	var err error
 	inkMiner.privKey, err = crypto.LoadPrivate(pubKeyFile, privKeyFile)

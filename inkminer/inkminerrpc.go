@@ -31,8 +31,9 @@ func (i *InkMiner) AddShape(req *blockartlib.Operation, resp *blockartlib.AddSha
 }
 
 func (i *InkMiner) GetSvgString(req *string, resp *string) error {
-	if _, ok := i.shapes[*req]; ok {
-		*resp = i.shapes[*req]
+	blockHash := "" // TODO: Compute hash of currentHead
+	if _, ok := i.states[blockHash].shapes[*req]; ok {
+		*resp = i.states[blockHash].shapes[*req]
 		return nil
 	}
 	return blockartlib.InvalidShapeHashError(*req)
@@ -79,7 +80,7 @@ func (i *InkMiner) GetChildrenBlocks(req *string, resp *blockartlib.GetChildrenR
 		if err != nil {
 			return nil
 		}
-		blockHash := string(bytes)
+		blockHash := string(bytes) // TODO: Compute block hash properly
 		for {
 			if *req == blockHash {
 				break
