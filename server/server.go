@@ -49,6 +49,7 @@ func (s *Server) Listen(addr string) error {
 		if err != nil {
 			log.Println(err)
 		}
+		log.Printf("New connection from: %s", conn.RemoteAddr())
 		go s.rs.ServeConn(conn)
 	}
 	return nil

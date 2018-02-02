@@ -2,6 +2,8 @@ package integration
 
 import (
 	"crypto/ecdsa"
+	"errors"
+	"log"
 	"testing"
 	"time"
 
@@ -10,6 +12,41 @@ import (
 	"../inkminer"
 	"../server"
 )
+
+func init() {
+	log.SetFlags(log.Flags() | log.Lshortfile)
+}
+
+func SucceedsSoon(t *testing.T, f func() error) {
+	timeout := time.After(time.Second * 5)
+	c := make(chan error)
+	go func() {
+		for {
+			select {
+			case <-timeout:
+				return
+			default:
+			}
+			err := f()
+			c <- err
+			if err == nil {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+	var err error
+	for {
+		select {
+		case err = <-c:
+			if err == nil {
+				return
+			}
+		case <-timeout:
+			t.Fatal(err)
+		}
+	}
+}
 
 type TestCluster struct {
 	Server *server.Server
@@ -38,9 +75,12 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		}
 	}()
 
-	for s.Addr() == "" {
-		time.Sleep(10 * time.Millisecond)
-	}
+	SucceedsSoon(t, func() error {
+		if s.Addr() == "" {
+			return errors.New("missing address")
+		}
+		return nil
+	})
 
 	for i := 0; i < nodes; i++ {
 		key, err := crypto.GenerateKey()
@@ -63,10 +103,15 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		}()
 	}
 
+	log.Println("ink miners up!")
+
 	for i, miner := range ts.Miners {
-		for miner.Addr() == "" {
-			time.Sleep(10 * time.Millisecond)
-		}
+		SucceedsSoon(t, func() error {
+			if miner.Addr() == "" {
+				return errors.New("missing address")
+			}
+			return nil
+		})
 
 		canvas, _, err := blockartlib.OpenCanvas(miner.Addr(), *ts.Keys[i])
 		if err != nil {

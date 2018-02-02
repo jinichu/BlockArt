@@ -20,7 +20,7 @@ func main() {
 
 	privKey, err := crypto.LoadPrivate(pubKeyFile, privKeyFile)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
 	m, err := inkminer.New(privKey)

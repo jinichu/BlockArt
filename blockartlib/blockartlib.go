@@ -196,7 +196,7 @@ type Canvas interface {
 // Can return the following errors:
 // - DisconnectedError
 func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, setting CanvasSettings, err error) {
-	client, err := rpc.DialHTTP("tcp", minerAddr)
+	client, err := rpc.Dial("tcp", minerAddr)
 	if err != nil {
 		return nil, CanvasSettings{}, DisconnectedError(minerAddr)
 	}
