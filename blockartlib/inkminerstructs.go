@@ -18,3 +18,11 @@ type AddShapeResponse struct {
 	blockHash    string
 	inkRemaining int
 }
+
+type GetShapesResponse struct {
+	shapeHashes []string
+}
+
+type GetChildrenResponse struct {
+	blockHashes []string
+}
