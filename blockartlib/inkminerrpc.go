@@ -2,6 +2,7 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 )
 
@@ -76,7 +77,18 @@ func (i *InkMiner) GetGenesisBlock(req *string, resp *string) error {
 func (i *InkMiner) GetChildrenBlocks(req *string, resp *GetChildrenResponse) error {
 	if _, ok := i.blockchain[*req]; ok {
 		getChildrenResponse := GetChildrenResponse{}
-		// TODO: Get children blocks
+		bytes, err := json.Marshal(i.currentHead)
+		if err != nil {
+			return nil
+		}
+		blockHash := string(bytes)
+		for {
+			if *req == blockHash {
+				break
+			}
+			getChildrenResponse.blockHashes = append(getChildrenResponse.blockHashes, blockHash)
+			blockHash = i.blockchain[blockHash].prevBlock
+		}
 		*resp = getChildrenResponse
 		return nil
 	}

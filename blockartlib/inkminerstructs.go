@@ -16,7 +16,7 @@ type Operation struct {
 
 type AddShapeResponse struct {
 	blockHash    string
-	inkRemaining int
+	inkRemaining uint32
 }
 
 type GetShapesResponse struct {

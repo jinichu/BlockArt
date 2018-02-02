@@ -12,13 +12,14 @@ import (
 )
 
 type InkMiner struct {
-	client     *rpc.Client       // RPC client to connect to the server
-	inkAmount  uint32            // Amount of ink this InkMiner hash
-	privKey    *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
-	blockchain map[string]*Block // Copy of the blockchain
-	latest     []*Block          // Latest blocks in the blockchain
-	settings   MinerNetSettings  // Settings for this BlockArt network instance
-	shapes     map[string]string // Map of shape hashes to their SVG string representation
+	client      *rpc.Client       // RPC client to connect to the server
+	inkAmount   uint32            // Amount of ink this InkMiner hash
+	privKey     *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
+	blockchain  map[string]*Block // Copy of the blockchain
+	latest      []*Block          // Latest blocks in the blockchain
+	settings    MinerNetSettings  // Settings for this BlockArt network instance
+	shapes      map[string]string // Map of shape hashes to their SVG string representation
+	currentHead *Block            // Block that InkMiner is mining on (current head)
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
