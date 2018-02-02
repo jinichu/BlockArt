@@ -3,14 +3,13 @@ package inkminer
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"log"
 	"net"
-	"net/http"
 	"net/rpc"
 	"strconv"
 	"sync"
 
 	"../blockartlib"
-	"../crypto"
 )
 
 type InkMiner struct {
@@ -23,36 +22,45 @@ type InkMiner struct {
 	shapes        map[string]string             // Map of shape hashes to their SVG string representation
 	currentHead   *blockartlib.Block            // Block that InkMiner is mining on (current head)
 	mineBlockChan chan blockartlib.Block
+	rs            *rpc.Server
 
 	mu struct {
 		sync.Mutex
 
+		l               net.Listener
 		currentWIPBlock blockartlib.Block
 	}
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
-func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) error {
-	localIP := "127.0.0.1"
-
+func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	inkMiner := &InkMiner{
 		blockchain: make(map[string]*blockartlib.Block),
 		shapes:     make(map[string]string),
 	}
-	var err error
-	inkMiner.privKey, err = crypto.LoadPrivate(pubKeyFile, privKeyFile)
+	inkMiner.privKey = privKey
+
+	inkMiner.rs = rpc.NewServer()
+	if err := inkMiner.rs.Register(inkMiner); err != nil {
+		return nil, err
+	}
+
+	return inkMiner, nil
+}
+
+func (i *InkMiner) Listen(serverAddr string) error {
+	// TODO: figure out a better IP
+	localIP := "127.0.0.1"
+	l, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return err
 	}
 
-	rpc.Register(inkMiner)
-	rpc.HandleHTTP()
-	l, err := net.Listen("tcp", localIP+":0")
-	if err != nil {
-		return err
-	}
+	i.mu.Lock()
+	i.mu.l = l
+	i.mu.Unlock()
+
 	fmt.Println("InkMiner is up!")
-	go http.Serve(l, nil)
 
 	localAddr := localIP + ":" + strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
 	_ = localAddr
@@ -61,13 +69,38 @@ func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) error
 	if err != nil {
 		return err
 	}
-	inkMiner.client = client
+	i.client = client
 	/*
 			  TODO: Do client.Call("Server.Register", args=(localAddr, pubKey),...)
 		    to register this InkMiner to the network and get the BlockArt settings
 	*/
 
-	select {}
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Printf("Server accept error: %s", err)
+		}
+		go i.rs.ServeConn(conn)
+	}
 
 	return nil
+}
+
+func (i *InkMiner) Close() error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	return i.mu.l.Close()
+}
+
+// Addr returns the listen address or "" if it hasn't started listening yet.
+func (i *InkMiner) Addr() string {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	if i.mu.l == nil {
+		return ""
+	}
+
+	return i.mu.l.Addr().String()
 }

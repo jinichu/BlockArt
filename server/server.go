@@ -15,6 +15,7 @@ type Server struct {
 	mu struct {
 		sync.Mutex
 
+		l      net.Listener
 		miners map[string]string
 	}
 }
@@ -38,6 +39,11 @@ func (s *Server) Listen(addr string) error {
 	if err != nil {
 		return err
 	}
+
+	s.mu.Lock()
+	s.mu.l = ln
+	s.mu.Unlock()
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -46,6 +52,24 @@ func (s *Server) Listen(addr string) error {
 		go s.rs.ServeConn(conn)
 	}
 	return nil
+}
+
+func (s *Server) Addr() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.mu.l == nil {
+		return ""
+	}
+
+	return s.mu.l.Addr().String()
+}
+
+func (s *Server) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.mu.l.Close()
 }
 
 type RegisterRequest struct {

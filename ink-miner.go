@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"./crypto"
 	"./inkminer"
 )
 
@@ -17,7 +18,16 @@ func main() {
 	pubKeyFile := args[1]
 	privKeyFile := args[2]
 
-	if err := inkminer.RunInkMiner(serverAddr, pubKeyFile, privKeyFile); err != nil {
+	privKey, err := crypto.LoadPrivate(pubKeyFile, privKeyFile)
+	if err != nil {
+		return err
+	}
+
+	m, err := inkminer.New(privKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Listen(serverAddr); err != nil {
 		log.Fatal(err)
 	}
 }
