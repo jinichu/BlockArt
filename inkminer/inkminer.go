@@ -2,7 +2,6 @@ package inkminer
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -10,11 +9,13 @@ import (
 	"sync"
 
 	"../blockartlib"
+	"../crypto"
 )
 
 type InkMiner struct {
-	client        *rpc.Client                   // RPC client to connect to the server
-	privKey       *ecdsa.PrivateKey             // Pub/priv key pair of this InkMiner
+	client        *rpc.Client       // RPC client to connect to the server
+	privKey       *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
+	publicKey     string
 	blockchain    map[string]*blockartlib.Block // Copy of the blockchain
 	latest        []*blockartlib.Block          // Latest blocks in the blockchain
 	settings      blockartlib.MinerNetSettings  // Settings for this BlockArt network instance
@@ -44,6 +45,11 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 		states:     make(map[string]State),
 	}
 	inkMiner.privKey = privKey
+	var err error
+	inkMiner.publicKey, err = crypto.MarshalPublic(&privKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
 
 	inkMiner.rs = rpc.NewServer()
 	if err := inkMiner.rs.Register(inkMiner); err != nil {
@@ -65,12 +71,12 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	i.mu.l = l
 	i.mu.Unlock()
 
-	fmt.Println("InkMiner is up!")
+	log.Printf("InkMiner is up! %s", l.Addr())
 
 	localAddr := localIP + ":" + strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
 	_ = localAddr
 
-	client, err := rpc.DialHTTP("tcp", serverAddr)
+	client, err := rpc.Dial("tcp", serverAddr)
 	if err != nil {
 		return err
 	}
@@ -85,6 +91,7 @@ func (i *InkMiner) Listen(serverAddr string) error {
 		if err != nil {
 			log.Printf("Server accept error: %s", err)
 		}
+		log.Printf("New connection from: %s", conn.RemoteAddr())
 		go i.rs.ServeConn(conn)
 	}
 

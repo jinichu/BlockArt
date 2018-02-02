@@ -1,16 +1,15 @@
 package inkminer
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 
 	"../blockartlib"
 )
 
-func (i *InkMiner) InitConnection(req *ecdsa.PublicKey, resp *blockartlib.CanvasSettings) error {
+func (i *InkMiner) InitConnection(req blockartlib.InitConnectionRequest, resp *blockartlib.CanvasSettings) error {
 	// Confirm that this is the right public key for this InkMiner
-	if *req != i.privKey.PublicKey {
+	if req.PublicKey != i.publicKey {
 		return errors.New("Public key is incorrect for this InkMiner")
 	}
 	*resp = i.settings.CanvasSettings

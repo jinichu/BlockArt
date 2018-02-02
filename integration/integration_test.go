@@ -103,8 +103,6 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		}()
 	}
 
-	log.Println("ink miners up!")
-
 	for i, miner := range ts.Miners {
 		SucceedsSoon(t, func() error {
 			if miner.Addr() == "" {
@@ -115,7 +113,7 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 
 		canvas, _, err := blockartlib.OpenCanvas(miner.Addr(), *ts.Keys[i])
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 		ts.ArtNodes = append(ts.ArtNodes, canvas)
 	}

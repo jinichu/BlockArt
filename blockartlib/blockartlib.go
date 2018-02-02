@@ -11,6 +11,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net/rpc"
+
+	"../crypto"
 )
 
 // Represents a type of shape in the BlockArt system.
@@ -204,7 +206,14 @@ func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, sett
 		client:  client,
 		privKey: privKey,
 	}
-	args := privKey.PublicKey
+
+	publicKey, err := crypto.MarshalPublic(&privKey.PublicKey)
+	if err != nil {
+		return nil, CanvasSettings{}, err
+	}
+	args := InitConnectionRequest{
+		PublicKey: publicKey,
+	}
 	var resp CanvasSettings
 	err = client.Call("InkMiner.InitConnection", args, &resp)
 	if err != nil {

@@ -26,3 +26,7 @@ type GetShapesResponse struct {
 type GetChildrenResponse struct {
 	BlockHashes []string
 }
+
+type InitConnectionRequest struct {
+	PublicKey string
+}
