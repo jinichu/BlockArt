@@ -1,13 +1,16 @@
 package crypto
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
-	"io/ioutil"
+    "crypto/ecdsa"
+    "crypto/elliptic"
+    "crypto/rand"
+    "crypto/x509"
+    "crypto/sha1"
+    "encoding/pem"
+    "encoding/hex"
+    "encoding/json"
+    "errors"
+    "io/ioutil"
 )
 
 // GenerateKey generates a ECDSA public-private key pair.
@@ -90,4 +93,13 @@ func LoadPrivate(publicPath, privatePath string) (*ecdsa.PrivateKey, error) {
 	}
 	privateKey.PublicKey = *publicKey
 	return privateKey, nil
+}
+
+// Compute the Hash of any string 
+func Hash(a string) (string, error) {
+    h := sha1.New()
+    if err := json.NewEncoder(h).Encode(a); err != nil {
+      return "", nil
+    }
+    return hex.EncodeToString(h.Sum(nil)), nil
 }
