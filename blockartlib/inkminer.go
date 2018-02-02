@@ -13,18 +13,22 @@ import (
 
 type InkMiner struct {
 	client     *rpc.Client       // RPC client to connect to the server
-	inkAmount  int               // Amount of ink this InkMiner hash
+	inkAmount  uint32            // Amount of ink this InkMiner hash
 	privKey    *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	blockchain map[string]*Block // Copy of the blockchain
 	latest     []*Block          // Latest blocks in the blockchain
 	settings   MinerNetSettings  // Settings for this BlockArt network instance
+	shapes     map[string]string // Map of shape hashes to their SVG string representation
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
 func RunInkMiner(serverAddr string, pubKeyFile string, privKeyFile string) error {
 	localIP := "127.0.0.1"
 
-	inkMiner := &InkMiner{}
+	inkMiner := &InkMiner{
+		blockchain: make(map[string]*Block),
+		shapes:     make(map[string]string),
+	}
 	var err error
 	inkMiner.privKey, err = crypto.LoadPrivate(pubKeyFile, privKeyFile)
 	if err != nil {
