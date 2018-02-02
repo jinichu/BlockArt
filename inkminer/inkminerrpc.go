@@ -10,7 +10,7 @@ import (
 
 func (i *InkMiner) InitConnection(req *ecdsa.PublicKey, resp *blockartlib.CanvasSettings) error {
 	// Confirm that this is the right public key for this InkMiner
-	if *req != i.privKey.Public() {
+	if *req != i.privKey.PublicKey {
 		return errors.New("Public key is incorrect for this InkMiner")
 	}
 	*resp = i.settings.CanvasSettings
@@ -18,14 +18,22 @@ func (i *InkMiner) InitConnection(req *ecdsa.PublicKey, resp *blockartlib.Canvas
 }
 
 func (i *InkMiner) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
-	// TODO: Check if this operation uses a legal amount of ink and fail if not
+	blockHash := "" // TODO: Properly compute blockHash from currentHead
+	if i.states[blockHash].inkLevels[req.PubKey] < req.InkCost {
+		return blockartlib.InsufficientInkError(i.states[blockHash].inkLevels[req.PubKey])
+	}
 	if err := i.floodOperation(req); err != nil {
 		return err
 	}
 	if err := i.mineBlock(*req); err != nil {
 		return err
 	}
-	addShapeResponse := blockartlib.AddShapeResponse{}
+	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
+	// TODO: InkMiner.states should be updated to have the current state too
+	addShapeResponse := blockartlib.AddShapeResponse{
+		BlockHash:    blockHash,
+		InkRemaining: i.states[blockHash].inkLevels[req.PubKey],
+	}
 	*resp = addShapeResponse
 	return nil
 }
@@ -40,7 +48,8 @@ func (i *InkMiner) GetSvgString(req *string, resp *string) error {
 }
 
 func (i *InkMiner) GetInk(req *string, resp *uint32) error {
-	*resp = i.inkAmount
+	blockHash := "" // TODO: Compute hash of currentHead
+	*resp = i.states[blockHash].inkLevels[i.privKey.PublicKey]
 	return nil
 }
 
@@ -51,7 +60,8 @@ func (i *InkMiner) DeleteShape(req *blockartlib.Operation, resp *uint32) error {
 	if err := i.mineBlock(*req); err != nil {
 		return err
 	}
-	*resp = i.inkAmount
+	blockHash := "" // TODO: Compute hash of currentHead
+	*resp = i.states[blockHash].inkLevels[req.PubKey]
 	return nil
 }
 

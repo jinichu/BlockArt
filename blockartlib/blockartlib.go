@@ -204,7 +204,7 @@ func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, sett
 		client:  client,
 		privKey: privKey,
 	}
-	args := privKey.Public()
+	args := privKey.PublicKey
 	var resp CanvasSettings
 	err = client.Call("InkMiner.InitConnection", args, &resp)
 	if err != nil {

@@ -15,7 +15,6 @@ import (
 
 type InkMiner struct {
 	client        *rpc.Client                   // RPC client to connect to the server
-	inkAmount     uint32                        // Amount of ink this InkMiner hash
 	privKey       *ecdsa.PrivateKey             // Pub/priv key pair of this InkMiner
 	blockchain    map[string]*blockartlib.Block // Copy of the blockchain
 	latest        []*blockartlib.Block          // Latest blocks in the blockchain
