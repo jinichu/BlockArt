@@ -22,13 +22,10 @@ func (i *InkMiner) AddShape(req *blockartlib.Operation, resp *blockartlib.AddSha
 	if err := i.floodOperation(req); err != nil {
 		return err
 	}
-	block, err := i.mineBlock(req)
-	if err != nil {
+	if err := i.mineBlock(*req); err != nil {
 		return err
 	}
 	addShapeResponse := blockartlib.AddShapeResponse{}
-	// TODO: Compute blockHash and amount of ink remaining
-	_ = block
 	*resp = addShapeResponse
 	return nil
 }
@@ -50,8 +47,7 @@ func (i *InkMiner) DeleteShape(req *blockartlib.Operation, resp *uint32) error {
 	if err := i.floodOperation(req); err != nil {
 		return err
 	}
-	_, err := i.mineBlock(req)
-	if err != nil {
+	if err := i.mineBlock(*req); err != nil {
 		return err
 	}
 	*resp = i.inkAmount

@@ -7,20 +7,28 @@ import (
 	"net/http"
 	"net/rpc"
 	"strconv"
+	"sync"
 
 	"../blockartlib"
 	"../crypto"
 )
 
 type InkMiner struct {
-	client      *rpc.Client                   // RPC client to connect to the server
-	inkAmount   uint32                        // Amount of ink this InkMiner hash
-	privKey     *ecdsa.PrivateKey             // Pub/priv key pair of this InkMiner
-	blockchain  map[string]*blockartlib.Block // Copy of the blockchain
-	latest      []*blockartlib.Block          // Latest blocks in the blockchain
-	settings    blockartlib.MinerNetSettings  // Settings for this BlockArt network instance
-	shapes      map[string]string             // Map of shape hashes to their SVG string representation
-	currentHead *blockartlib.Block            // Block that InkMiner is mining on (current head)
+	client        *rpc.Client                   // RPC client to connect to the server
+	inkAmount     uint32                        // Amount of ink this InkMiner hash
+	privKey       *ecdsa.PrivateKey             // Pub/priv key pair of this InkMiner
+	blockchain    map[string]*blockartlib.Block // Copy of the blockchain
+	latest        []*blockartlib.Block          // Latest blocks in the blockchain
+	settings      blockartlib.MinerNetSettings  // Settings for this BlockArt network instance
+	shapes        map[string]string             // Map of shape hashes to their SVG string representation
+	currentHead   *blockartlib.Block            // Block that InkMiner is mining on (current head)
+	mineBlockChan chan blockartlib.Block
+
+	mu struct {
+		sync.Mutex
+
+		currentWIPBlock blockartlib.Block
+	}
 	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
