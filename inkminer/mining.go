@@ -7,7 +7,7 @@ import (
 )
 
 func (i *InkMiner) mineBlock(operation blockartlib.Operation) error {
-	// TODO: Jonathan - verify operation and start mining this block. Return mined Block
+	// TODO: Jonathan - verify operation and start mining this block. Set mined block to be currentHead
 
 	// This maybe should be structured as "daemon" ie. an infinite for loop with
 	// channels in/out so it's possible to interrupt mid block. - Tristan
