@@ -1,21 +1,23 @@
-package blockartlib
+package inkminer
 
 import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+
+	"../blockartlib"
 )
 
-func (i *InkMiner) InitConnection(req *ecdsa.PublicKey, resp *CanvasSettings) error {
+func (i *InkMiner) InitConnection(req *ecdsa.PublicKey, resp *blockartlib.CanvasSettings) error {
 	// Confirm that this is the right public key for this InkMiner
 	if *req != i.privKey.Public() {
 		return errors.New("Public key is incorrect for this InkMiner")
 	}
-	*resp = i.settings.canvasSettings
+	*resp = i.settings.CanvasSettings
 	return nil
 }
 
-func (i *InkMiner) AddShape(req *Operation, resp *AddShapeResponse) error {
+func (i *InkMiner) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
 	// TODO: Check if this operation uses a legal amount of ink and fail if not
 	if err := i.floodOperation(req); err != nil {
 		return err
@@ -24,7 +26,7 @@ func (i *InkMiner) AddShape(req *Operation, resp *AddShapeResponse) error {
 	if err != nil {
 		return err
 	}
-	addShapeResponse := AddShapeResponse{}
+	addShapeResponse := blockartlib.AddShapeResponse{}
 	// TODO: Compute blockHash and amount of ink remaining
 	_ = block
 	*resp = addShapeResponse
@@ -36,7 +38,7 @@ func (i *InkMiner) GetSvgString(req *string, resp *string) error {
 		*resp = i.shapes[*req]
 		return nil
 	}
-	return InvalidShapeHashError(*req)
+	return blockartlib.InvalidShapeHashError(*req)
 }
 
 func (i *InkMiner) GetInk(req *string, resp *uint32) error {
@@ -44,7 +46,7 @@ func (i *InkMiner) GetInk(req *string, resp *uint32) error {
 	return nil
 }
 
-func (i *InkMiner) DeleteShape(req *Operation, resp *uint32) error {
+func (i *InkMiner) DeleteShape(req *blockartlib.Operation, resp *uint32) error {
 	if err := i.floodOperation(req); err != nil {
 		return err
 	}
@@ -56,17 +58,17 @@ func (i *InkMiner) DeleteShape(req *Operation, resp *uint32) error {
 	return nil
 }
 
-func (i *InkMiner) GetShapes(req *string, resp *GetShapesResponse) error {
+func (i *InkMiner) GetShapes(req *string, resp *blockartlib.GetShapesResponse) error {
 	if _, ok := i.blockchain[*req]; ok {
 		block := i.blockchain[*req]
-		getShapesResponse := GetShapesResponse{}
-		for i := 0; i < len(block.records); i++ {
-			getShapesResponse.shapeHashes = append(getShapesResponse.shapeHashes, block.records[i].shapeHash)
+		getShapesResponse := blockartlib.GetShapesResponse{}
+		for i := 0; i < len(block.Records); i++ {
+			getShapesResponse.ShapeHashes = append(getShapesResponse.ShapeHashes, block.Records[i].ShapeHash)
 		}
 		*resp = getShapesResponse
 		return nil
 	}
-	return InvalidBlockHashError(*req)
+	return blockartlib.InvalidBlockHashError(*req)
 }
 
 func (i *InkMiner) GetGenesisBlock(req *string, resp *string) error {
@@ -74,9 +76,9 @@ func (i *InkMiner) GetGenesisBlock(req *string, resp *string) error {
 	return nil
 }
 
-func (i *InkMiner) GetChildrenBlocks(req *string, resp *GetChildrenResponse) error {
+func (i *InkMiner) GetChildrenBlocks(req *string, resp *blockartlib.GetChildrenResponse) error {
 	if _, ok := i.blockchain[*req]; ok {
-		getChildrenResponse := GetChildrenResponse{}
+		getChildrenResponse := blockartlib.GetChildrenResponse{}
 		bytes, err := json.Marshal(i.currentHead)
 		if err != nil {
 			return nil
@@ -86,11 +88,11 @@ func (i *InkMiner) GetChildrenBlocks(req *string, resp *GetChildrenResponse) err
 			if *req == blockHash {
 				break
 			}
-			getChildrenResponse.blockHashes = append(getChildrenResponse.blockHashes, blockHash)
-			blockHash = i.blockchain[blockHash].prevBlock
+			getChildrenResponse.BlockHashes = append(getChildrenResponse.BlockHashes, blockHash)
+			blockHash = i.blockchain[blockHash].PrevBlock
 		}
 		*resp = getChildrenResponse
 		return nil
 	}
-	return InvalidBlockHashError(*req)
+	return blockartlib.InvalidBlockHashError(*req)
 }

@@ -4,16 +4,20 @@ import (
 	"log"
 	"os"
 
-	"./blockartlib"
+	"./inkminer"
 )
 
 func main() {
 	args := os.Args[1:]
+	if len(args) != 3 {
+		log.Fatal("inkminer <server addr> <public key file> <private key file>")
+	}
+
 	serverAddr := args[0]
 	pubKeyFile := args[1]
 	privKeyFile := args[2]
 
-	if err := blockartlib.RunInkMiner(serverAddr, pubKeyFile, privKeyFile); err != nil {
+	if err := inkminer.RunInkMiner(serverAddr, pubKeyFile, privKeyFile); err != nil {
 		log.Fatal(err)
 	}
 }

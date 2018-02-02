@@ -54,7 +54,7 @@ type MinerNetSettings struct {
 	PoWDifficultyNoOpBlock uint8
 
 	// Canvas settings
-	canvasSettings CanvasSettings
+	CanvasSettings CanvasSettings
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
