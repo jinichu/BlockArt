@@ -48,6 +48,7 @@ func (s *Server) Listen(addr string) error {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 		log.Printf("New connection from: %s", conn.RemoteAddr())
 		go s.rs.ServeConn(conn)
@@ -75,6 +76,13 @@ func (s *Server) Close() error {
 
 type RegisterRequest struct {
 	PublicKey, Address string
+}
+
+func (s *Server) NumMiners() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return len(s.mu.miners)
 }
 
 func (s *Server) Register(req RegisterRequest, resp *blockartlib.MinerNetSettings) error {

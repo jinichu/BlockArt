@@ -10,6 +10,7 @@ import (
 
 	"../blockartlib"
 	"../crypto"
+	"../server"
 )
 
 type InkMiner struct {
@@ -74,22 +75,27 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	log.Printf("InkMiner is up! %s", l.Addr())
 
 	localAddr := localIP + ":" + strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
-	_ = localAddr
 
 	client, err := rpc.Dial("tcp", serverAddr)
 	if err != nil {
 		return err
 	}
 	i.client = client
-	/*
-			  TODO: Do client.Call("Server.Register", args=(localAddr, pubKey),...)
-		    to register this InkMiner to the network and get the BlockArt settings
-	*/
+
+	req := server.RegisterRequest{
+		PublicKey: i.publicKey,
+		Address:   localAddr,
+	}
+	var resp blockartlib.MinerNetSettings
+	if err := client.Call("Server.Register", req, &resp); err != nil {
+		return err
+	}
 
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			log.Printf("Server accept error: %s", err)
+			continue
 		}
 		log.Printf("New connection from: %s", conn.RemoteAddr())
 		go i.rs.ServeConn(conn)

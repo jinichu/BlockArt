@@ -3,6 +3,7 @@ package integration
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -117,6 +118,14 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		}
 		ts.ArtNodes = append(ts.ArtNodes, canvas)
 	}
+
+	SucceedsSoon(t, func() error {
+		n := s.NumMiners()
+		if n != nodes {
+			return fmt.Errorf("expected %d nodes on server; got %d", nodes, n)
+		}
+		return nil
+	})
 
 	return ts
 }
