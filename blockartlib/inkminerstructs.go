@@ -15,8 +15,8 @@ type Operation struct {
 }
 
 type OpSig struct {
-	r string
-	s string
+	R string
+	S string
 }
 
 type AddShapeResponse struct {

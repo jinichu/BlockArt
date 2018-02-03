@@ -85,11 +85,29 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	}
 
 	i.rs = rpc.NewServer()
-	if err := i.rs.Register(&InkMinerRPC{i}); err != nil {
+	if err := i.rs.Register(i.RPC()); err != nil {
 		return nil, err
 	}
 
 	return i, nil
+}
+
+func (i *InkMiner) RPC() *InkMinerRPC {
+	return &InkMinerRPC{i}
+}
+
+func (i *InkMiner) BlockPoolSize() int {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	return len(i.mu.blockchain)
+}
+
+func (i *InkMiner) MemPoolSize() int {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	return len(i.mu.mempool)
 }
 
 func (i *InkMiner) Listen(serverAddr string) error {

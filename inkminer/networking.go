@@ -156,6 +156,8 @@ func (i *InkMiner) floodOperation(operation blockartlib.Operation) error {
 }
 
 func (i *InkMinerRPC) NotifyOperation(req NotifyOperationRequest, resp *NotifyOperationResponse) error {
+	// TODO: validate operation
+
 	hash, err := req.Operation.Hash()
 	if err != nil {
 		return err
@@ -193,6 +195,8 @@ func (i *InkMiner) announceBlock(block blockartlib.Block) error {
 }
 
 func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockResponse) error {
+	// TODO: validate block
+
 	hash, err := req.Block.Hash()
 	if err != nil {
 		return err
