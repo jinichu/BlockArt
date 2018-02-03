@@ -1,5 +1,7 @@
 package blockartlib
 
+import crypto "../crypto"
+
 // Structs for ArtNode -> InkMiner RPC calls
 
 type Operation struct {
@@ -32,4 +34,8 @@ type GetChildrenResponse struct {
 
 type InitConnectionRequest struct {
 	PublicKey string
+}
+
+func (o Operation) Hash() (string, error) {
+	return crypto.Hash(o)
 }

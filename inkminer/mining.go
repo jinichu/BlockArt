@@ -6,6 +6,14 @@ import (
 	"../blockartlib"
 )
 
+func (i *InkMiner) GetBlock(hash string) (blockartlib.Block, bool) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	b, ok := i.mu.blockchain[hash]
+	return b, ok
+}
+
 func (i *InkMiner) mineBlock(operation blockartlib.Operation) error {
 	// TODO: Jonathan - verify operation and start mining this block. Set mined block to be currentHead and create a State object
 

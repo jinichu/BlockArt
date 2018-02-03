@@ -17,11 +17,11 @@ import (
 )
 
 type InkMiner struct {
-	addr          string
-	client        *rpc.Client       // RPC client to connect to the server
-	privKey       *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
-	publicKey     string
-	blockchain    map[string]blockartlib.Block // Copy of the blockchain
+	addr      string
+	client    *rpc.Client       // RPC client to connect to the server
+	privKey   *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
+	publicKey string
+
 	latest        []*blockartlib.Block         // Latest blocks in the blockchain
 	settings      blockartlib.MinerNetSettings // Settings for this BlockArt network instance
 	currentHead   *blockartlib.Block           // Block that InkMiner is mining on (current head)
@@ -37,6 +37,11 @@ type InkMiner struct {
 		l               net.Listener
 		currentWIPBlock blockartlib.Block
 		peers           map[string]*peer
+
+		// blockchain is a map between blockhash and the block
+		blockchain map[string]blockartlib.Block
+		// all operations that haven't been added to the current block chain
+		mempool map[string]blockartlib.Operation
 	}
 }
 
@@ -61,28 +66,30 @@ func getOutboundIP() string {
 }
 
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
-	inkMiner := &InkMiner{
-		blockchain: make(map[string]*blockartlib.Block),
-		states:     make(map[string]State),
-		stopper:    stopper.New(),
+	i := &InkMiner{
+		states:  make(map[string]State),
+		stopper: stopper.New(),
 	}
-	inkMiner.mu.peers = make(map[string]*peer)
-	inkMiner.privKey = privKey
 
-	inkMiner.log = log.New(os.Stderr, "", log.Flags()|log.Lshortfile)
+	i.mu.blockchain = make(map[string]blockartlib.Block)
+	i.mu.mempool = make(map[string]blockartlib.Operation)
+	i.mu.peers = make(map[string]*peer)
+	i.privKey = privKey
+
+	i.log = log.New(os.Stderr, "", log.Flags()|log.Lshortfile)
 
 	var err error
-	inkMiner.publicKey, err = crypto.MarshalPublic(&privKey.PublicKey)
+	i.publicKey, err = crypto.MarshalPublic(&privKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 
-	inkMiner.rs = rpc.NewServer()
-	if err := inkMiner.rs.Register(&InkMinerRPC{inkMiner}); err != nil {
+	i.rs = rpc.NewServer()
+	if err := i.rs.Register(&InkMinerRPC{i}); err != nil {
 		return nil, err
 	}
 
-	return inkMiner, nil
+	return i, nil
 }
 
 func (i *InkMiner) Listen(serverAddr string) error {

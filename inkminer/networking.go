@@ -145,12 +145,6 @@ type NotifyOperationRequest struct {
 
 type NotifyOperationResponse struct{}
 
-type NotifyBlockRequest struct {
-	Block blockartlib.Block
-}
-
-type NotifyBlockResponse struct{}
-
 func (i *InkMiner) floodOperation(operation blockartlib.Operation) error {
 	req := NotifyOperationRequest{
 		Operation: operation,
@@ -161,6 +155,16 @@ func (i *InkMiner) floodOperation(operation blockartlib.Operation) error {
 	})
 }
 
+func (i *InkMinerRPC) NotifyOperation(req NotifyOperationRequest, resp *NotifyOperationResponse) error {
+	return ErrUnimplemented
+}
+
+type NotifyBlockRequest struct {
+	Block blockartlib.Block
+}
+
+type NotifyBlockResponse struct{}
+
 func (i *InkMiner) announceBlock(block blockartlib.Block) error {
 	req := NotifyBlockRequest{
 		Block: block,
@@ -169,6 +173,10 @@ func (i *InkMiner) announceBlock(block blockartlib.Block) error {
 		var resp NotifyBlockResponse
 		return p.rpc.Call("InkMinerRPC.NotifyBlock", req, &resp)
 	})
+}
+
+func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockResponse) error {
+	return ErrUnimplemented
 }
 
 type peer struct {
