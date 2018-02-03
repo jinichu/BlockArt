@@ -133,7 +133,7 @@ func (a *ArtNode) GetChildren(blockHash string) (blockHashes []string, err error
 // - DisconnectedError
 func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
 	// TODO: client.Call("InkMinerRPC.GetInk", args, &resp)
-	return 0, errors.New("Not implemented")
+	return 0, nil
 }
 
 // Gets the ink cost of a particular operation
