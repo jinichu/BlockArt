@@ -15,12 +15,20 @@ import (
 	"../crypto"
 )
 
+// Represents the operation to do  to the canvas with a particular shape
+// in the BlockArt System
+type OpType int
+const (
+    ADD OpType = iota
+    DELETE
+)
+
 // Represents a type of shape in the BlockArt system.
 type ShapeType int
 
 const (
 	// Path shape.
-	PATH ShapeType = iota
+    PATH ShapeType = iota
 
 	// Circle shape (extra credit).
 	// CIRCLE
