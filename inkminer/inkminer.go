@@ -33,13 +33,12 @@ type InkMiner struct {
 		l               net.Listener
 		currentWIPBlock blockartlib.Block
 	}
-	// TODO: Keep track of shapes on the canvas and the owners (ArtNode) of every shape
 }
 
 type State struct {
-	shapes      map[string]string          // Map of shape hashes to their SVG string representation
-	shapeOwners map[string]ecdsa.PublicKey // Map of shape hashes to their owner (InkMiner PubKey)
-	inkLevels   map[ecdsa.PublicKey]uint32 // Current ink levels of every InkMiner
+	shapes      map[string]string // Map of shape hashes to their SVG string representation
+	shapeOwners map[string]string // Map of shape hashes to their owner (InkMiner PubKey)
+	inkLevels   map[string]uint32 // Current ink levels of every InkMiner
 }
 
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
