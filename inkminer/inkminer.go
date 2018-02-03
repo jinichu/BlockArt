@@ -5,16 +5,19 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 	"strconv"
 	"sync"
 
-	"../blockartlib"
-	"../crypto"
-	"../server"
-	"../stopper"
+	blockartlib "../blockartlib"
+	colors "../colors"
+	crypto "../crypto"
+	server "../server"
+	stopper "../stopper"
 )
 
 type InkMiner struct {
+	addr          string
 	client        *rpc.Client       // RPC client to connect to the server
 	privKey       *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	publicKey     string
@@ -26,12 +29,14 @@ type InkMiner struct {
 	rs            *rpc.Server
 	states        map[string]State // States of the canvas at a given block
 	stopper       *stopper.Stopper
+	log           *log.Logger
 
 	mu struct {
 		sync.Mutex
 
 		l               net.Listener
 		currentWIPBlock blockartlib.Block
+		peers           map[string]*peer
 	}
 }
 
@@ -41,13 +46,31 @@ type State struct {
 	inkLevels   map[string]uint32 // Current ink levels of every InkMiner
 }
 
+// getOutboundIP sets up a UDP connection (but doesn't send anything) and uses
+// the local IP addressed assigned.
+func getOutboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP.String()
+}
+
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	inkMiner := &InkMiner{
 		blockchain: make(map[string]*blockartlib.Block),
 		states:     make(map[string]State),
 		stopper:    stopper.New(),
 	}
+	inkMiner.mu.peers = make(map[string]*peer)
 	inkMiner.privKey = privKey
+
+	inkMiner.log = log.New(os.Stderr, "", log.Flags()|log.Lshortfile)
+
 	var err error
 	inkMiner.publicKey, err = crypto.MarshalPublic(&privKey.PublicKey)
 	if err != nil {
@@ -55,7 +78,7 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	}
 
 	inkMiner.rs = rpc.NewServer()
-	if err := inkMiner.rs.Register(inkMiner); err != nil {
+	if err := inkMiner.rs.Register(&InkMinerRPC{inkMiner}); err != nil {
 		return nil, err
 	}
 
@@ -63,8 +86,7 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 }
 
 func (i *InkMiner) Listen(serverAddr string) error {
-	// TODO: figure out a better IP
-	localIP := "127.0.0.1"
+	localIP := getOutboundIP()
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return err
@@ -74,11 +96,13 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	i.mu.l = l
 	i.mu.Unlock()
 
-	log.Printf("InkMiner is up! %s", l.Addr())
-
 	localAddr := localIP + ":" + strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
+	i.addr = localAddr
 
-	client, err := rpc.Dial("tcp", serverAddr)
+	i.log.SetPrefix(colors.Green(i.addr) + " ")
+	i.log.Printf("InkMiner running...")
+
+	client, err := dialRPC(serverAddr)
 	if err != nil {
 		return err
 	}
@@ -89,9 +113,12 @@ func (i *InkMiner) Listen(serverAddr string) error {
 		Address:   localAddr,
 	}
 	var resp blockartlib.MinerNetSettings
-	if err := client.Call("Server.Register", req, &resp); err != nil {
+	if err := client.Call("ServerRPC.Register", req, &resp); err != nil {
 		return err
 	}
+	i.settings = resp
+
+	go i.peerDiscoveryLoop()
 
 	for {
 		select {
@@ -102,10 +129,10 @@ func (i *InkMiner) Listen(serverAddr string) error {
 
 		conn, err := l.Accept()
 		if err != nil {
-			log.Printf("Server accept error: %s", err)
+			i.log.Printf("Server accept error: %s", err)
 			continue
 		}
-		log.Printf("New connection from: %s", conn.RemoteAddr())
+		i.log.Printf("New connection from: %s", conn.RemoteAddr())
 		go i.rs.ServeConn(conn)
 	}
 
@@ -123,12 +150,5 @@ func (i *InkMiner) Close() error {
 
 // Addr returns the listen address or "" if it hasn't started listening yet.
 func (i *InkMiner) Addr() string {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	if i.mu.l == nil {
-		return ""
-	}
-
-	return i.mu.l.Addr().String()
+	return i.addr
 }

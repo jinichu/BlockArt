@@ -18,9 +18,10 @@ import (
 // Represents the operation to do  to the canvas with a particular shape
 // in the BlockArt System
 type OpType int
+
 const (
-    ADD OpType = iota
-    DELETE
+	ADD OpType = iota
+	DELETE
 )
 
 // Represents a type of shape in the BlockArt system.
@@ -28,7 +29,7 @@ type ShapeType int
 
 const (
 	// Path shape.
-    PATH ShapeType = iota
+	PATH ShapeType = iota
 
 	// Circle shape (extra credit).
 	// CIRCLE
@@ -223,7 +224,7 @@ func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, sett
 		PublicKey: publicKey,
 	}
 	var resp CanvasSettings
-	err = client.Call("InkMiner.InitConnection", args, &resp)
+	err = client.Call("InkMinerRPC.InitConnection", args, &resp)
 	if err != nil {
 		return nil, CanvasSettings{}, err
 	}

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/rpc"
 
-	"../crypto"
+	crypto "../crypto"
 )
 
 type ArtNode struct {
@@ -53,7 +53,7 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 	}
 
 	var resp AddShapeResponse
-	err = a.client.Call("InkMiner.AddShape", args, &resp)
+	err = a.client.Call("InkMinerRPC.AddShape", args, &resp)
 	//TODO: retrieve blockHash, inkRemaining from call to ink miner to add shape
 
 	if err != nil {
@@ -79,7 +79,7 @@ func sign(operation []byte, privKey ecdsa.PrivateKey) (signedR, signedS string, 
 // - DisconnectedError
 // - InvalidShapeHashError
 func (a *ArtNode) GetSvgString(shapeHash string) (svgString string, err error) {
-	// TODO: client.Call("InkMiner.GetSvgString", args, &resp)
+	// TODO: client.Call("InkMinerRPC.GetSvgString", args, &resp)
 	return "", errors.New("Not implemented")
 }
 
@@ -87,7 +87,7 @@ func (a *ArtNode) GetSvgString(shapeHash string) (svgString string, err error) {
 // Can return the following errors:
 // - DisconnectedError
 func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
-	// TODO: client.Call("InkMiner.GetInk", args, &resp)
+	// TODO: client.Call("InkMinerRPC.GetInk", args, &resp)
 
 	return 0, errors.New("Not implemented")
 }
@@ -99,7 +99,7 @@ func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
 // - OutOfBoundsError
 // - ShapeOverlapError
 func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining uint32, err error) {
-	// TODO: client.Call("InkMiner.DeleteShape", args, &resp)
+	// TODO: client.Call("InkMinerRPC.DeleteShape", args, &resp)
 	return 0, errors.New("Not implemented")
 }
 
@@ -108,7 +108,7 @@ func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining
 // - DisconnectedError
 // - InvalidBlockHashError
 func (a *ArtNode) GetShapes(blockHash string) (shapeHashes []string, err error) {
-	// TODO: client.Call("InkMiner.GetShapes", args, &resp)
+	// TODO: client.Call("InkMinerRPC.GetShapes", args, &resp)
 	return nil, errors.New("Not implemented")
 }
 
@@ -116,7 +116,7 @@ func (a *ArtNode) GetShapes(blockHash string) (shapeHashes []string, err error) 
 // Can return the following errors:
 // - DisconnectedError
 func (a *ArtNode) GetGenesisBlock() (blockHash string, err error) {
-	// TODO: client.Call("InkMiner.GetGenesisBlock", args, &resp)
+	// TODO: client.Call("InkMinerRPC.GetGenesisBlock", args, &resp)
 	return "", errors.New("Not implemented")
 }
 
@@ -125,14 +125,14 @@ func (a *ArtNode) GetGenesisBlock() (blockHash string, err error) {
 // - DisconnectedError
 // - InvalidBlockHashError
 func (a *ArtNode) GetChildren(blockHash string) (blockHashes []string, err error) {
-	// TODO: client.Call("InkMiner.GetChildrenBlocks", args, &resp)
+	// TODO: client.Call("InkMinerRPC.GetChildrenBlocks", args, &resp)
 	return nil, errors.New("Not implemented")
 }
 
 // Closes the canvas/connection to the BlockArt network.
 // - DisconnectedError
 func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
-	// TODO: client.Call("InkMiner.GetInk", args, &resp)
+	// TODO: client.Call("InkMinerRPC.GetInk", args, &resp)
 	return 0, errors.New("Not implemented")
 }
 

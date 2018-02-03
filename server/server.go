@@ -4,15 +4,18 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 	"sync"
 
-	"../blockartlib"
-	"../stopper"
+	blockartlib "../blockartlib"
+	colors "../colors"
+	stopper "../stopper"
 )
 
 type Server struct {
 	rs      *rpc.Server
 	stopper *stopper.Stopper
+	log     *log.Logger
 
 	mu struct {
 		sync.Mutex
@@ -26,11 +29,12 @@ func New() (*Server, error) {
 	s := &Server{
 		rs:      rpc.NewServer(),
 		stopper: stopper.New(),
+		log:     log.New(os.Stderr, colors.Orange("server "), log.Flags()|log.Lshortfile),
 	}
 
 	s.mu.miners = map[string]string{}
 
-	if err := s.rs.Register(s); err != nil {
+	if err := s.rs.Register(&ServerRPC{s}); err != nil {
 		return nil, err
 	}
 
@@ -56,10 +60,10 @@ func (s *Server) Listen(addr string) error {
 
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Printf("Server accept error: %s", err)
+			s.log.Printf("Server accept error: %s", err)
 			continue
 		}
-		log.Printf("New connection from: %s", conn.RemoteAddr())
+		s.log.Printf("New connection from: %s", conn.RemoteAddr())
 		go s.rs.ServeConn(conn)
 	}
 	return nil
@@ -96,11 +100,15 @@ func (s *Server) NumMiners() int {
 	return len(s.mu.miners)
 }
 
-func (s *Server) Register(req RegisterRequest, resp *blockartlib.MinerNetSettings) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+type ServerRPC struct {
+	s *Server
+}
 
-	s.mu.miners[req.PublicKey] = req.Address
+func (s *ServerRPC) Register(req RegisterRequest, resp *blockartlib.MinerNetSettings) error {
+	s.s.mu.Lock()
+	defer s.s.mu.Unlock()
+
+	s.s.mu.miners[req.PublicKey] = req.Address
 
 	*resp = blockartlib.MinerNetSettings{
 		GenesisBlockHash:       "genesis",
@@ -125,11 +133,11 @@ type GetNodesResponse struct {
 	Addrs []string
 }
 
-func (s *Server) GetNodes(req GetNodesRequest, resp *GetNodesResponse) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *ServerRPC) GetNodes(req GetNodesRequest, resp *GetNodesResponse) error {
+	s.s.mu.Lock()
+	defer s.s.mu.Unlock()
 
-	for _, addr := range s.mu.miners {
+	for _, addr := range s.s.mu.miners {
 		resp.Addrs = append(resp.Addrs, addr)
 	}
 
@@ -142,6 +150,6 @@ type HeartBeatRequest struct {
 
 type HeartBeatResponse struct{}
 
-func (s *Server) HeartBeat(req HeartBeatRequest, resp *HeartBeatResponse) error {
+func (s *ServerRPC) HeartBeat(req HeartBeatRequest, resp *HeartBeatResponse) error {
 	return nil
 }
