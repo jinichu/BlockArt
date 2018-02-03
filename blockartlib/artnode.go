@@ -23,9 +23,21 @@ type ArtNode struct {
 // - ShapeSvgStringTooLongError
 func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgString string, fill string, stroke string) (shapeHash string, blockHash string, inkRemaining uint32, err error) {
 	r, s, err := sign([]byte(string(ADD)), a.privKey)
-	inkCost, err := calculateInkCost(shapeSvgString, fill, stroke)
-	shapeHash, err = crypto.Hash(shapeSvgString)
+	if err != nil {
+		return "", "", 0, err
+	}
 
+	inkCost, err := calculateInkCost(shapeSvgString, fill, stroke)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	shapeHash, err = crypto.Hash(shapeSvgString)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
 	if err != nil {
 		return "", "", 0, err
 	}
@@ -34,7 +46,7 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		OpType:      ADD,
 		Shape:       shapeSvgString,
 		OpSig:       OpSig{r, s},
-		PubKey:      a.privKey.PublicKey,
+		PubKey:      publicKey,
 		InkCost:     inkCost,
 		ShapeHash:   shapeHash,
 		ValidateNum: validateNum,

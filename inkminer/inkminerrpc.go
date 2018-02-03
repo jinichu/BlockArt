@@ -1,10 +1,10 @@
 package inkminer
 
 import (
-	"encoding/json"
 	"errors"
 
 	"../blockartlib"
+	"../crypto"
 )
 
 type InkMinerRPC struct {
@@ -21,7 +21,11 @@ func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp
 }
 
 func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
-	blockHash := "" // TODO: Properly compute blockHash from currentHead
+	blockHash, err := crypto.Hash(i.i.currentHead)
+	if err != nil {
+		return err
+	}
+
 	if i.i.states[blockHash].inkLevels[req.PubKey] < req.InkCost {
 		return blockartlib.InsufficientInkError(i.i.states[blockHash].inkLevels[req.PubKey])
 	}
@@ -33,6 +37,11 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	}
 	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
 	// TODO: InkMiner.states should be updated to have the current state too
+
+	blockHash, err = crypto.Hash(i.i.currentHead)
+	if err != nil {
+		return err
+	}
 	addShapeResponse := blockartlib.AddShapeResponse{
 		BlockHash:    blockHash,
 		InkRemaining: i.i.states[blockHash].inkLevels[req.PubKey],
@@ -42,7 +51,11 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 }
 
 func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
-	blockHash := "" // TODO: Compute hash of currentHead
+	blockHash, err := crypto.Hash(i.i.currentHead)
+	if err != nil {
+		return err
+	}
+
 	if _, ok := i.i.states[blockHash].shapes[*req]; ok {
 		*resp = i.i.states[blockHash].shapes[*req]
 		return nil
@@ -51,8 +64,11 @@ func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
 }
 
 func (i *InkMinerRPC) GetInk(req *string, resp *uint32) error {
-	blockHash := "" // TODO: Compute hash of currentHead
-	*resp = i.i.states[blockHash].inkLevels[i.i.privKey.PublicKey]
+	blockHash, err := crypto.Hash(i.i.currentHead)
+	if err != nil {
+		return err
+	}
+	*resp = i.i.states[blockHash].inkLevels[i.i.publicKey]
 	return nil
 }
 
@@ -63,7 +79,10 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 	if err := i.i.mineBlock(*req); err != nil {
 		return err
 	}
-	blockHash := "" // TODO: Compute hash of currentHead
+	blockHash, err := crypto.Hash(i.i.currentHead)
+	if err != nil {
+		return err
+	}
 	*resp = i.i.states[blockHash].inkLevels[req.PubKey]
 	return nil
 }
@@ -89,11 +108,12 @@ func (i *InkMinerRPC) GetGenesisBlock(req *string, resp *string) error {
 func (i *InkMinerRPC) GetChildrenBlocks(req *string, resp *blockartlib.GetChildrenResponse) error {
 	if _, ok := i.i.blockchain[*req]; ok {
 		getChildrenResponse := blockartlib.GetChildrenResponse{}
-		bytes, err := json.Marshal(i.i.currentHead)
+
+		blockHash, err := crypto.Hash(i.i.currentHead)
 		if err != nil {
-			return nil
+			return err
 		}
-		blockHash := string(bytes) // TODO: Compute block hash properly
+
 		for {
 			if *req == blockHash {
 				break
