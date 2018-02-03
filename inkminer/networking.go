@@ -156,7 +156,24 @@ func (i *InkMiner) floodOperation(operation blockartlib.Operation) error {
 }
 
 func (i *InkMinerRPC) NotifyOperation(req NotifyOperationRequest, resp *NotifyOperationResponse) error {
-	return ErrUnimplemented
+	hash, err := req.Operation.Hash()
+	if err != nil {
+		return err
+	}
+
+	i.i.mu.Lock()
+	_, ok := i.i.mu.mempool[hash]
+	if !ok {
+		i.i.mu.mempool[hash] = req.Operation
+	}
+	i.i.mu.Unlock()
+
+	if ok {
+		return nil
+	}
+
+	// if it's a new operation, announce it to all peers
+	return i.i.floodOperation(req.Operation)
 }
 
 type NotifyBlockRequest struct {
@@ -176,7 +193,24 @@ func (i *InkMiner) announceBlock(block blockartlib.Block) error {
 }
 
 func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockResponse) error {
-	return ErrUnimplemented
+	hash, err := req.Block.Hash()
+	if err != nil {
+		return err
+	}
+
+	i.i.mu.Lock()
+	_, ok := i.i.mu.blockchain[hash]
+	if !ok {
+		i.i.mu.blockchain[hash] = req.Block
+	}
+	i.i.mu.Unlock()
+
+	if ok {
+		return nil
+	}
+
+	// if it's a new block, announce it to all peers
+	return i.i.announceBlock(req.Block)
 }
 
 type peer struct {
