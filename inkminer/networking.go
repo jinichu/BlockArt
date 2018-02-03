@@ -49,7 +49,9 @@ func (i *InkMiner) peerDiscover() error {
 
 func (i *InkMiner) addPeer(address string) error {
 	if address == i.addr {
+		return nil
 	}
+
 	i.mu.Lock()
 	_, ok := i.mu.peers[address]
 	i.mu.Unlock()

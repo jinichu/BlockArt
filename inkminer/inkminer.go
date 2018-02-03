@@ -119,6 +119,8 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	}
 	i.settings = resp
 
+	go i.peerDiscoveryLoop()
+
 	for {
 		select {
 		case <-i.stopper.ShouldStop():
