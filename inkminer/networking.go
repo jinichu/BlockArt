@@ -139,13 +139,36 @@ func (i *InkMiner) asyncSend(f func(p *peer) error) error {
 	return nil
 }
 
-func (i *InkMiner) floodOperation(operation *blockartlib.Operation) error {
-	// TODO: Tristan pls complete
-	return ErrUnimplemented
+type NotifyOperationRequest struct {
+	Operation blockartlib.Operation
+}
+
+type NotifyOperationResponse struct{}
+
+type NotifyBlockRequest struct {
+	Block blockartlib.Block
+}
+
+type NotifyBlockResponse struct{}
+
+func (i *InkMiner) floodOperation(operation blockartlib.Operation) error {
+	req := NotifyOperationRequest{
+		Operation: operation,
+	}
+	return i.asyncSend(func(p *peer) error {
+		var resp NotifyOperationResponse
+		return p.rpc.Call("InkMinerRPC.NotifyOperation", req, &resp)
+	})
 }
 
 func (i *InkMiner) announceBlock(block blockartlib.Block) error {
-	return ErrUnimplemented
+	req := NotifyBlockRequest{
+		Block: block,
+	}
+	return i.asyncSend(func(p *peer) error {
+		var resp NotifyBlockResponse
+		return p.rpc.Call("InkMinerRPC.NotifyBlock", req, &resp)
+	})
 }
 
 type peer struct {

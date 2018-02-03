@@ -21,10 +21,10 @@ type InkMiner struct {
 	client        *rpc.Client       // RPC client to connect to the server
 	privKey       *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	publicKey     string
-	blockchain    map[string]*blockartlib.Block // Copy of the blockchain
-	latest        []*blockartlib.Block          // Latest blocks in the blockchain
-	settings      blockartlib.MinerNetSettings  // Settings for this BlockArt network instance
-	currentHead   *blockartlib.Block            // Block that InkMiner is mining on (current head)
+	blockchain    map[string]blockartlib.Block // Copy of the blockchain
+	latest        []*blockartlib.Block         // Latest blocks in the blockchain
+	settings      blockartlib.MinerNetSettings // Settings for this BlockArt network instance
+	currentHead   *blockartlib.Block           // Block that InkMiner is mining on (current head)
 	mineBlockChan chan blockartlib.Block
 	rs            *rpc.Server
 	states        map[string]State // States of the canvas at a given block
