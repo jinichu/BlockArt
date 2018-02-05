@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"../blockartlib"
+	server "../server"
 )
 
 type InkMinerRPC struct {
 	i *InkMiner
 }
 
-func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp *blockartlib.CanvasSettings) error {
+func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp *server.CanvasSettings) error {
 	// Confirm that this is the right public key for this InkMiner
 	if req.PublicKey != i.i.publicKey {
 		return blockartlib.DisconnectedError(i.i.Addr())

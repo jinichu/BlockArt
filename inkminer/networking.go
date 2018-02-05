@@ -2,13 +2,13 @@ package inkminer
 
 import (
 	"errors"
+	"log"
 	"net"
 	"net/rpc"
 	"time"
 
 	blockartlib "../blockartlib"
 	colors "../colors"
-	server "../server"
 )
 
 var ErrUnimplemented = errors.New("unimplemented")
@@ -28,17 +28,18 @@ func (i *InkMiner) peerDiscover() error {
 		return nil
 	}
 
-	var resp server.GetNodesResponse
-	if err := i.client.Call("ServerRPC.GetNodes", server.GetNodesRequest{
-		PublicKey: i.publicKey,
-	}, &resp); err != nil {
+	var resp []net.Addr
+	if err := i.client.Call("RServer.GetNodes", i.privKey.PublicKey, &resp); err != nil {
+		log.Printf("GetNodes failed: %s", err)
 		return err
 	}
 
-	for _, addr := range resp.Addrs {
+	log.Printf("got peers: %+v", resp)
+
+	for _, addr := range resp {
 		addr := addr
 		go func() {
-			if err := i.addPeer(addr); err != nil {
+			if err := i.addPeer(addr.String()); err != nil {
 				i.log.Printf("failed to add peer: %s")
 			}
 		}()

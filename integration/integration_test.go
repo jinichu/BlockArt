@@ -19,7 +19,7 @@ func init() {
 }
 
 func SucceedsSoon(t *testing.T, f func() error) {
-	timeout := time.After(time.Second * 5)
+	timeout := time.After(time.Second * 2)
 	c := make(chan error)
 	go func() {
 		for {
@@ -64,15 +64,26 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		t: t,
 	}
 
-	s, err := server.New()
+	c := server.Config{
+		RpcIpPort:        "127.0.0.1:0",
+		NumMinerToReturn: uint8(nodes),
+		MinerSettings: server.MinerNetSettings{
+			MinerSettings: server.MinerSettings{
+				MinNumMinerConnections: uint8(nodes - 1),
+				HeartBeat:              10000,
+			},
+		},
+	}
+
+	s, err := server.New(c)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ts.Server = s
 
 	go func() {
-		if err := s.Listen("127.0.0.1:0"); err != nil {
-			t.Error(err)
+		if err := s.Listen(); err != nil {
+			t.Fatal(err)
 		}
 	}()
 
@@ -92,17 +103,19 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 
 		m, err := inkminer.New(key)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		ts.Miners = append(ts.Miners, m)
 
 		go func() {
 			if err := m.Listen(s.Addr()); err != nil {
-				t.Error(err)
+				log.Println(err)
+				t.Fatal(err)
 			}
 		}()
 	}
+	log.Printf("inkminers up")
 
 	for i, miner := range ts.Miners {
 		SucceedsSoon(t, func() error {

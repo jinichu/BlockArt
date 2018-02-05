@@ -1,4 +1,4 @@
 
 .PHONY: test
 test:
-	go test ./inkminer ./server ./blockartlib ./crypto ./integration ./stopper
+	go test -timeout 30s ./inkminer ./server ./blockartlib ./crypto ./integration ./stopper ./serverold

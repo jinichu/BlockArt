@@ -22,9 +22,9 @@ type InkMiner struct {
 	privKey   *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	publicKey string
 
-	latest        []*blockartlib.Block         // Latest blocks in the blockchain
-	settings      blockartlib.MinerNetSettings // Settings for this BlockArt network instance
-	currentHead   *blockartlib.Block           // Block that InkMiner is mining on (current head)
+	latest        []*blockartlib.Block    // Latest blocks in the blockchain
+	settings      server.MinerNetSettings // Settings for this BlockArt network instance
+	currentHead   blockartlib.Block       // Block that InkMiner is mining on (current head)
 	mineBlockChan chan blockartlib.Block
 	rs            *rpc.Server
 	states        map[string]State // States of the canvas at a given block
@@ -133,12 +133,17 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	}
 	i.client = client
 
-	req := server.RegisterRequest{
-		PublicKey: i.publicKey,
-		Address:   localAddr,
+	tcpAddr, err := net.ResolveTCPAddr("tcp", localAddr)
+	if err != nil {
+		return err
 	}
-	var resp blockartlib.MinerNetSettings
-	if err := client.Call("ServerRPC.Register", req, &resp); err != nil {
+
+	req := server.MinerInfo{
+		Key:     i.privKey.PublicKey,
+		Address: tcpAddr,
+	}
+	var resp server.MinerNetSettings
+	if err := client.Call("RServer.Register", req, &resp); err != nil {
 		return err
 	}
 	i.settings = resp
