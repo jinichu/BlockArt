@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"../blockartlib"
-	"../crypto"
 )
 
 type InkMinerRPC struct {
@@ -21,7 +20,7 @@ func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp
 }
 
 func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
-	blockHash, err := crypto.Hash(i.i.currentHead)
+	blockHash, err := i.i.currentHead.Hash()
 	if err != nil {
 		return err
 	}
@@ -38,7 +37,7 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
 	// TODO: InkMiner.states should be updated to have the current state too
 
-	blockHash, err = crypto.Hash(i.i.currentHead)
+	blockHash, err = i.i.currentHead.Hash()
 	if err != nil {
 		return err
 	}
@@ -51,7 +50,7 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 }
 
 func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
-	blockHash, err := crypto.Hash(i.i.currentHead)
+	blockHash, err := i.i.currentHead.Hash()
 	if err != nil {
 		return err
 	}
@@ -64,7 +63,7 @@ func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
 }
 
 func (i *InkMinerRPC) GetInk(req *string, resp *uint32) error {
-	blockHash, err := crypto.Hash(i.i.currentHead)
+	blockHash, err := i.i.currentHead.Hash()
 	if err != nil {
 		return err
 	}
@@ -79,7 +78,7 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 	if err := i.i.mineBlock(*req); err != nil {
 		return err
 	}
-	blockHash, err := crypto.Hash(i.i.currentHead)
+	blockHash, err := i.i.currentHead.Hash()
 	if err != nil {
 		return err
 	}
