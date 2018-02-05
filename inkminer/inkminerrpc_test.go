@@ -85,7 +85,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 	}
 
 	inkMiner.states[block3Hash] = state3
-	inkMiner.currentHead = &block3
+	inkMiner.currentHead = block3
 	inkMiner.mu.blockchain = make(map[string]blockartlib.Block)
 	inkMiner.mu.blockchain[block1Hash] = block1
 	inkMiner.mu.blockchain[block2Hash] = block2
