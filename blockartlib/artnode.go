@@ -32,19 +32,25 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		return "", "", 0, err
 	}
 
-	shapeHash, err = crypto.Hash(shapeSvgString)
+	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
 	if err != nil {
 		return "", "", 0, err
 	}
 
-	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
+	shape := Shape{
+		Svg:    shapeSvgString,
+		Fill:   fill,
+		Stroke: stroke,
+	}
+
+	shapeHash, err = crypto.Hash(shape)
 	if err != nil {
 		return "", "", 0, err
 	}
 
 	args := Operation{
 		OpType:      ADD,
-		Shape:       shapeSvgString,
+		Shape:       shape,
 		OpSig:       OpSig{r, s},
 		PubKey:      publicKey,
 		InkCost:     inkCost,
@@ -72,7 +78,7 @@ func (a *ArtNode) GetSvgString(shapeHash string) (svgString string, err error) {
 
 	err = a.client.Call("InkMinerRPC.GetSvgString", shapeHash, &resp)
 	if err != nil {
-	  return "", err
+		return "", err
 	}
 
 	svgString = resp
@@ -192,8 +198,6 @@ func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
 	return
 }
 
-
-
 // HELPERS
 // Gets the ink cost of a particular operation
 func calculateInkCost(shapeSvgString string, fill string, stroke string) (cost uint32, err error) {
@@ -204,7 +208,7 @@ func calculateInkCost(shapeSvgString string, fill string, stroke string) (cost u
 // - InvalidShapeSvgString Error
 // - ShapeSvgStringTooLong Error
 func svgStringValidityCheck(svgString string) (err error) {
-  return errors.New("Not implemented")
+	return errors.New("Not implemented")
 }
 
 // Provides a sig for an operation
@@ -218,4 +222,3 @@ func sign(operation []byte, privKey ecdsa.PrivateKey) (signedR, signedS string, 
 	signedS = fmt.Sprint(s)
 	return
 }
-

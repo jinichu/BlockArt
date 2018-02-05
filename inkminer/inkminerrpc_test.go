@@ -1,6 +1,7 @@
 package inkminer
 
 import (
+	"strings"
 	"testing"
 
 	"../blockartlib"
@@ -21,7 +22,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		return InkMinerRPC{}, err
 	}
 	state1 := State{
-		shapes:      make(map[string]string),
+		shapes:      make(map[string]blockartlib.Shape),
 		shapeOwners: make(map[string]string),
 		inkLevels:   make(map[string]uint32),
 	}
@@ -35,7 +36,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		return InkMinerRPC{}, err
 	}
 	state2 := State{
-		shapes:      make(map[string]string),
+		shapes:      make(map[string]blockartlib.Shape),
 		shapeOwners: make(map[string]string),
 		inkLevels:   make(map[string]uint32),
 	}
@@ -48,26 +49,40 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		return InkMinerRPC{}, err
 	}
 	state3 := State{
-		shapes:      make(map[string]string),
+		shapes:      make(map[string]blockartlib.Shape),
 		shapeOwners: make(map[string]string),
 		inkLevels:   make(map[string]uint32),
 	}
-	shapeHash, err := crypto.Hash("M 0 0 H 20 V 20 H -20 Z")
+	shape := blockartlib.Shape{
+		Svg: "M 0 0 H 20 V 20 H -20 Z",
+	}
+	shapeHash, err := crypto.Hash(shape)
 	if err != nil {
 		return InkMinerRPC{}, err
 	}
 	op := blockartlib.Operation{
-		ShapeHash: shapeHash,
+		Shape: shape,
 	}
 	op2 := blockartlib.Operation{
-		ShapeHash: "qwerasdf",
+		Shape: blockartlib.Shape{
+			Svg: "qwerasdf",
+		},
 	}
 	block3.Records = append(block3.Records, op)
 	block3.Records = append(block3.Records, op2)
 	block3Hash, err := block3.Hash()
 
-	state3.shapes[shapeHash] = "M 0 0 H 20 V 20 H -20 Z"
+	state3.shapes[shapeHash] = shape
 	state3.inkLevels["public"] = 50
+
+	block4 := blockartlib.Block{
+		PrevBlock: block2Hash,
+		Nonce:     14,
+	}
+	block4Hash, err := block4.Hash()
+	if err != nil {
+		return InkMinerRPC{}, err
+	}
 
 	inkMiner.states[block3Hash] = state3
 	inkMiner.currentHead = &block3
@@ -75,6 +90,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 	inkMiner.mu.blockchain[block1Hash] = block1
 	inkMiner.mu.blockchain[block2Hash] = block2
 	inkMiner.mu.blockchain[block3Hash] = block3
+	inkMiner.mu.blockchain[block4Hash] = block4
 	inkMiner.settings.GenesisBlockHash = "1234"
 	inkMinerRPC = InkMinerRPC{
 		i: inkMiner,
@@ -97,13 +113,16 @@ func TestGetSvgString(t *testing.T) {
 	if err == nil {
 		t.Fatal("This ShapeHash shouldn't exist")
 	}
-	args, err = crypto.Hash("M 0 0 H 20 V 20 H -20 Z")
+	shape := blockartlib.Shape{
+		Svg: "M 0 0 H 20 V 20 H -20 Z",
+	}
+	args, err = crypto.Hash(shape)
 	if err != nil {
 		t.Error(err)
 	}
 	err = i.GetSvgString(&args, &resp)
-	if err != nil || resp != "M 0 0 H 20 V 20 H -20 Z" {
-		t.Fatal(err)
+	if err != nil || !strings.Contains(resp, "M 0 0 H 20 V 20 H -20 Z") {
+		t.Fatal(resp)
 	}
 }
 
@@ -173,6 +192,7 @@ func TestGetChildrenBlocks(t *testing.T) {
 	if err != nil || len(resp.BlockHashes) != 0 {
 		t.Fatal(err)
 	}
+	// Block with only one branch
 	block1 := blockartlib.Block{
 		PrevBlock: "1234",
 		Nonce:     2,
@@ -182,6 +202,19 @@ func TestGetChildrenBlocks(t *testing.T) {
 		t.Error(err)
 	}
 	err = i.GetChildrenBlocks(&block1Hash, &resp)
+	if err != nil || len(resp.BlockHashes) != 1 {
+		t.Fatal(err)
+	}
+	// Block with two branches
+	block2 := blockartlib.Block{
+		PrevBlock: block1Hash,
+		Nonce:     3,
+	}
+	block2Hash, err := block2.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+	err = i.GetChildrenBlocks(&block2Hash, &resp)
 	if err != nil || len(resp.BlockHashes) != 2 {
 		t.Fatal(err)
 	}
