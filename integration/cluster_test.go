@@ -138,3 +138,43 @@ func TestClusterOperationPropagation(t *testing.T) {
 		return nil
 	})
 }
+
+func TestSimpleClusterBlockPropagateOnJoin(t *testing.T) {
+	ts := NewTestCluster(t, 1)
+	defer ts.Close()
+
+	var resp inkminer.NotifyBlockResponse
+	if err := ts.Miners[0].RPC().NotifyBlock(inkminer.NotifyBlockRequest{
+		Block: blockartlib.Block{
+			BlockNum: 1,
+		},
+	}, &resp); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ts.Miners[0].RPC().NotifyBlock(inkminer.NotifyBlockRequest{
+		Block: blockartlib.Block{
+			BlockNum: 2,
+		},
+	}, &resp); err != nil {
+		t.Fatal(err)
+	}
+
+	SucceedsSoon(t, func() error {
+		n := ts.Miners[0].BlockPoolSize()
+		if n != 2 {
+			return fmt.Errorf("0. expected 2 blocks, have %d", n)
+		}
+		return nil
+	})
+
+	ts.AddNode()
+
+	SucceedsSoon(t, func() error {
+		n := ts.Miners[1].BlockPoolSize()
+		if n != 2 {
+			return fmt.Errorf("1. expected 2 blocks, have %d", n)
+		}
+		return nil
+	})
+}

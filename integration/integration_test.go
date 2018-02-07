@@ -64,12 +64,17 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		t: t,
 	}
 
+	min := nodes - 1
+	if min <= 0 {
+		min = 1
+	}
+
 	c := server.Config{
 		RpcIpPort:        "127.0.0.1:0",
 		NumMinerToReturn: uint8(nodes),
 		MinerSettings: server.MinerNetSettings{
 			MinerSettings: server.MinerSettings{
-				MinNumMinerConnections: uint8(nodes - 1),
+				MinNumMinerConnections: uint8(min),
 				HeartBeat:              10000,
 			},
 		},
@@ -95,42 +100,9 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 	})
 
 	for i := 0; i < nodes; i++ {
-		key, err := crypto.GenerateKey()
-		if err != nil {
-			t.Error(err)
-		}
-		ts.Keys = append(ts.Keys, key)
-
-		m, err := inkminer.New(key)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		ts.Miners = append(ts.Miners, m)
-
-		go func() {
-			if err := m.Listen(s.Addr()); err != nil {
-				log.Println(err)
-				t.Fatal(err)
-			}
-		}()
+		ts.AddNode()
 	}
 	log.Printf("inkminers up")
-
-	for i, miner := range ts.Miners {
-		SucceedsSoon(t, func() error {
-			if miner.Addr() == "" {
-				return errors.New("missing address")
-			}
-			return nil
-		})
-
-		canvas, _, err := blockartlib.OpenCanvas(miner.Addr(), *ts.Keys[i])
-		if err != nil {
-			t.Fatal(err)
-		}
-		ts.ArtNodes = append(ts.ArtNodes, canvas)
-	}
 
 	SucceedsSoon(t, func() error {
 		n := s.NumMiners()
@@ -141,6 +113,43 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 	})
 
 	return ts
+}
+
+func (ts *TestCluster) AddNode() {
+	t := ts.t
+
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Keys = append(ts.Keys, key)
+
+	m, err := inkminer.New(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ts.Miners = append(ts.Miners, m)
+
+	go func() {
+		if err := m.Listen(ts.Server.Addr()); err != nil {
+			log.Println(err)
+			t.Fatal(err)
+		}
+	}()
+
+	SucceedsSoon(t, func() error {
+		if m.Addr() == "" {
+			return errors.New("missing address")
+		}
+		return nil
+	})
+
+	canvas, _, err := blockartlib.OpenCanvas(m.Addr(), *key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.ArtNodes = append(ts.ArtNodes, canvas)
 }
 
 func (ts *TestCluster) Close() {

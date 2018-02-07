@@ -34,12 +34,12 @@ func (i *InkMiner) peerDiscover() error {
 		return err
 	}
 
-	log.Printf("got peers: %+v", resp)
+	i.log.Printf("got peers: %+v", resp)
 
 	for _, addr := range resp {
 		addr := addr
 		go func() {
-			if err := i.addPeer(addr.String()); err != nil {
+			if _, err := i.addPeer(addr.String()); err != nil {
 				i.log.Printf("failed to add peer: %s")
 			}
 		}()
@@ -48,58 +48,116 @@ func (i *InkMiner) peerDiscover() error {
 	return nil
 }
 
-func (i *InkMiner) addPeer(address string) error {
+func (i *InkMiner) addPeer(address string) (*peer, error) {
 	if address == i.addr {
-		return nil
+		return nil, nil
 	}
 
 	i.mu.Lock()
-	_, ok := i.mu.peers[address]
+	p, ok := i.mu.peers[address]
 	i.mu.Unlock()
 
 	// don't readd a peer
 	if ok {
-		return nil
+		return p, nil
 	}
 
 	client, err := dialRPC(address)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	p := &peer{
+	p = &peer{
 		rpc:     client,
 		address: address,
 	}
 
 	i.mu.Lock()
-	p2, old := i.mu.peers[address]
+	p2, exists := i.mu.peers[address]
 	// race condition to add peer, discard this one
-	if old {
+	if exists {
 		p = p2
 	} else {
 		i.mu.peers[address] = p
 	}
 	i.mu.Unlock()
 
-	if !old {
-		var resp HelloResponse
-		if err := p.rpc.Call("InkMinerRPC.Hello", HelloRequest{Addr: i.addr}, &resp); err != nil {
-			return err
+	if !exists {
+		if err := p.sendHello(i); err != nil {
+			return nil, err
 		}
 	}
 
+	return p, nil
+}
+
+func (p *peer) sendHello(i *InkMiner) error {
+	var resp HelloResponse
+	req := HelloRequest{
+		Addr:   i.Addr(),
+		Blocks: map[string]struct{}{},
+	}
+
+	i.mu.Lock()
+	for blockHash := range i.mu.blockchain {
+		req.Blocks[blockHash] = struct{}{}
+	}
+	i.mu.Unlock()
+
+	if err := p.rpc.Call("InkMinerRPC.Hello", req, &resp); err != nil {
+		return err
+	}
 	return nil
 }
 
 type HelloRequest struct {
 	Addr string
+
+	Blocks map[string]struct{}
 }
 
 type HelloResponse struct{}
 
 func (i *InkMinerRPC) Hello(req HelloRequest, resp *HelloResponse) error {
-	return i.i.addPeer(req.Addr)
+	i.i.log.Printf("got Hello: %+v", req)
+
+	p, err := i.i.addPeer(req.Addr)
+	if err != nil {
+		return err
+	}
+
+	if p == nil {
+		return nil
+	}
+
+	// send all blocks the client doesn't have
+	go func() {
+		var toSend []string
+		i.i.mu.Lock()
+		for hash := range i.i.mu.blockchain {
+			if _, ok := req.Blocks[hash]; ok {
+				continue
+			}
+
+			toSend = append(toSend, hash)
+		}
+		i.i.mu.Unlock()
+
+		for _, hash := range toSend {
+			i.i.mu.Lock()
+			block, ok := i.i.mu.blockchain[hash]
+			i.i.mu.Unlock()
+			if !ok {
+				continue
+			}
+
+			if err := p.notifyBlock(block); err != nil {
+				log.Printf("failed to send block to new client: %s", err)
+			}
+		}
+	}()
+
+	return nil
 }
 
 func (i *InkMiner) NumPeers() int {
@@ -186,13 +244,17 @@ type NotifyBlockRequest struct {
 type NotifyBlockResponse struct{}
 
 func (i *InkMiner) announceBlock(block blockartlib.Block) error {
+	return i.asyncSend(func(p *peer) error {
+		return p.notifyBlock(block)
+	})
+}
+
+func (p *peer) notifyBlock(block blockartlib.Block) error {
 	req := NotifyBlockRequest{
 		Block: block,
 	}
-	return i.asyncSend(func(p *peer) error {
-		var resp NotifyBlockResponse
-		return p.rpc.Call("InkMinerRPC.NotifyBlock", req, &resp)
-	})
+	var resp NotifyBlockResponse
+	return p.rpc.Call("InkMinerRPC.NotifyBlock", req, &resp)
 }
 
 func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockResponse) error {
