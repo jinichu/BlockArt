@@ -23,8 +23,8 @@ type InkMiner struct {
 	publicKey string							// Public key of the Miner (Note: is this needed?)
 
 	latest        []*blockartlib.Block         	// Latest blocks in the blockchain
-	settings      blockartlib.MinerNetSettings 	// Settings for this BlockArt network instance
-	currentHead   *blockartlib.Block           	// Block that InkMiner is mining on (current head)
+	settings      server.MinerNetSettings 		// Settings for this BlockArt network instance
+	currentHead   blockartlib.Block       		// Block that InkMiner is mining on (current head)
 	mineBlockChan chan blockartlib.Block 		// Channel used to distribute blocks
 	rs            *rpc.Server 					// RPC Server
 	states        map[string]State 				// States of the canvas at a given block
@@ -46,9 +46,9 @@ type InkMiner struct {
 }
 
 type State struct {
-	shapes      map[string]string // Map of shape hashes to their SVG string representation
-	shapeOwners map[string]string // Map of shape hashes to their owner (InkMiner PubKey)
-	inkLevels   map[string]uint32 // Current ink levels of every InkMiner
+	shapes      map[string]blockartlib.Shape // Map of shape hashes to their SVG string representation
+	shapeOwners map[string]string            // Map of shape hashes to their owner (InkMiner PubKey)
+	inkLevels   map[string]uint32            // Current ink levels of every InkMiner
 }
 
 // getOutboundIP sets up a UDP connection (but doesn't send anything) and uses
@@ -133,12 +133,17 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	}
 	i.client = client
 
-	req := server.RegisterRequest{
-		PublicKey: i.publicKey,
-		Address:   localAddr,
+	tcpAddr, err := net.ResolveTCPAddr("tcp", localAddr)
+	if err != nil {
+		return err
 	}
-	var resp blockartlib.MinerNetSettings
-	if err := client.Call("ServerRPC.Register", req, &resp); err != nil {
+
+	req := server.MinerInfo{
+		Key:     i.privKey.PublicKey,
+		Address: tcpAddr,
+	}
+	var resp server.MinerNetSettings
+	if err := client.Call("RServer.Register", req, &resp); err != nil {
 		return err
 	}
 	i.settings = resp

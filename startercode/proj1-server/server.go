@@ -15,14 +15,17 @@ $ go run server.go
 
 */
 
-package server
+package main
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/gob"
+	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -31,9 +34,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-
-	colors "../colors"
-	stopper "../stopper"
 )
 
 // Errors that the server could return.
@@ -86,9 +86,7 @@ type MinerNetSettings struct {
 	CanvasSettings CanvasSettings `json:"canvas-settings"`
 }
 
-type RServer struct {
-	s *Server
-}
+type RServer int
 
 type Miner struct {
 	Address         net.Addr
@@ -108,81 +106,55 @@ type AllMiners struct {
 
 var (
 	unknownKeyError UnknownKeyError = errors.New("BlockArt server: unknown key")
-	errLog          *log.Logger     = log.New(os.Stderr, colors.Orange("server "), log.Lshortfile|log.LUTC|log.Lmicroseconds)
-	outLog          *log.Logger     = log.New(os.Stderr, colors.Orange("server "), log.Lshortfile|log.LUTC|log.Lmicroseconds)
+	config          Config
+	errLog          *log.Logger = log.New(os.Stderr, "[serv] ", log.Lshortfile|log.LUTC|log.Lmicroseconds)
+	outLog          *log.Logger = log.New(os.Stderr, "[serv] ", log.Lshortfile|log.LUTC|log.Lmicroseconds)
+	// Miners in the system.
+	allMiners AllMiners = AllMiners{all: make(map[string]*Miner)}
 )
 
+func readConfigOrDie(path string) {
+	file, err := os.Open(path)
+	handleErrorFatal("config file", err)
+
+	buffer, err := ioutil.ReadAll(file)
+	handleErrorFatal("read config", err)
+
+	err = json.Unmarshal(buffer, &config)
+	handleErrorFatal("parse config", err)
+}
+
 // Parses args, setups up RPC server.
-func init() {
+func main() {
 	gob.Register(&net.TCPAddr{})
 	gob.Register(&elliptic.CurveParams{})
-	gob.Register(elliptic.P256())
-}
 
-type Server struct {
-	rpc     *rpc.Server
-	l       net.Listener
-	stopper *stopper.Stopper
+	path := flag.String("c", "", "Path to the JSON config")
+	flag.Parse()
 
-	allMiners AllMiners
-	config    Config
-}
-
-func New(config Config) (*Server, error) {
-	server := &Server{
-		rpc:       rpc.NewServer(),
-		stopper:   stopper.New(),
-		allMiners: AllMiners{all: make(map[string]*Miner)},
-		config:    config,
+	if *path == "" {
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
-	server.rpc.Register(&RServer{server})
 
-	return server, nil
-}
+	readConfigOrDie(*path)
 
-func (s *Server) Listen() error {
-	l, err := net.Listen("tcp", s.config.RpcIpPort)
-	if err != nil {
-		return err
-	}
-	s.l = l
+	rand.Seed(time.Now().UnixNano())
 
-	outLog.Printf("Server started. Receiving on %s\n", s.config.RpcIpPort)
+	rserver := new(RServer)
+
+	server := rpc.NewServer()
+	server.Register(rserver)
+
+	l, e := net.Listen("tcp", config.RpcIpPort)
+
+	handleErrorFatal("listen error", e)
+	outLog.Printf("Server started. Receiving on %s\n", config.RpcIpPort)
 
 	for {
-		select {
-		case <-s.stopper.ShouldStop():
-			return nil
-		default:
-		}
-
-		conn, err := l.Accept()
-		if err != nil {
-			errLog.Printf("accept error: %s", err)
-			continue
-		}
-		go s.rpc.ServeConn(conn)
+		conn, _ := l.Accept()
+		go server.ServeConn(conn)
 	}
-}
-
-func (s *Server) Addr() string {
-	if s.l == nil {
-		return ""
-	}
-
-	return s.l.Addr().String()
-}
-
-func (s *Server) NumMiners() int {
-	s.allMiners.Lock()
-	defer s.allMiners.Unlock()
-
-	return len(s.allMiners.all)
-}
-
-func (s *Server) Close() error {
-	s.stopper.Stop()
-	return s.l.Close()
 }
 
 type MinerInfo struct {
@@ -191,23 +163,17 @@ type MinerInfo struct {
 }
 
 // Function to delete dead miners (no recent heartbeat)
-func (s *Server) monitor(k string, heartBeatInterval time.Duration) {
+func monitor(k string, heartBeatInterval time.Duration) {
 	for {
-		select {
-		case <-s.stopper.ShouldStop():
-			return
-		default:
-		}
-
-		s.allMiners.Lock()
-		if time.Now().UnixNano()-s.allMiners.all[k].RecentHeartbeat > int64(heartBeatInterval) {
-			outLog.Printf("%s timed out\n", s.allMiners.all[k].Address.String())
-			delete(s.allMiners.all, k)
-			s.allMiners.Unlock()
+		allMiners.Lock()
+		if time.Now().UnixNano()-allMiners.all[k].RecentHeartbeat > int64(heartBeatInterval) {
+			outLog.Printf("%s timed out\n", allMiners.all[k].Address.String())
+			delete(allMiners.all, k)
+			allMiners.Unlock()
 			return
 		}
-		outLog.Printf("%s is alive\n", s.allMiners.all[k].Address.String())
-		s.allMiners.Unlock()
+		outLog.Printf("%s is alive\n", allMiners.all[k].Address.String())
+		allMiners.Unlock()
 		time.Sleep(heartBeatInterval)
 	}
 }
@@ -225,28 +191,28 @@ func pubKeyToString(key ecdsa.PublicKey) string {
 // - AddressAlreadyRegisteredError if the server has already registered this address.
 // - KeyAlreadyRegisteredError if the server already has a registration record for publicKey.
 func (s *RServer) Register(m MinerInfo, r *MinerNetSettings) error {
-	s.s.allMiners.Lock()
-	defer s.s.allMiners.Unlock()
+	allMiners.Lock()
+	defer allMiners.Unlock()
 
 	k := pubKeyToString(m.Key)
-	if miner, exists := s.s.allMiners.all[k]; exists {
+	if miner, exists := allMiners.all[k]; exists {
 		return KeyAlreadyRegisteredError(miner.Address.String())
 	}
 
-	for _, miner := range s.s.allMiners.all {
+	for _, miner := range allMiners.all {
 		if miner.Address.Network() == m.Address.Network() && miner.Address.String() == m.Address.String() {
 			return AddressAlreadyRegisteredError(m.Address.String())
 		}
 	}
 
-	s.s.allMiners.all[k] = &Miner{
+	allMiners.all[k] = &Miner{
 		m.Address,
 		time.Now().UnixNano(),
 	}
 
-	go s.s.monitor(k, time.Duration(s.s.config.MinerSettings.HeartBeat)*time.Millisecond)
+	go monitor(k, time.Duration(config.MinerSettings.HeartBeat)*time.Millisecond)
 
-	*r = s.s.config.MinerSettings
+	*r = config.MinerSettings
 
 	outLog.Printf("Got Register from %s\n", m.Address.String())
 
@@ -268,18 +234,18 @@ func (s *RServer) GetNodes(key ecdsa.PublicKey, addrSet *[]net.Addr) error {
 	// TODO: validate miner's GetNodes protocol? (could monitor state
 	// of network graph/connectivity and validate protocol FSM)
 
-	s.s.allMiners.RLock()
-	defer s.s.allMiners.RUnlock()
+	allMiners.RLock()
+	defer allMiners.RUnlock()
 
 	k := pubKeyToString(key)
 
-	if _, ok := s.s.allMiners.all[k]; !ok {
+	if _, ok := allMiners.all[k]; !ok {
 		return unknownKeyError
 	}
 
-	minerAddresses := make([]net.Addr, 0, len(s.s.allMiners.all)-1)
+	minerAddresses := make([]net.Addr, 0, len(allMiners.all)-1)
 
-	for pubKey, miner := range s.s.allMiners.all {
+	for pubKey, miner := range allMiners.all {
 		if pubKey == k {
 			continue
 		}
@@ -295,11 +261,7 @@ func (s *RServer) GetNodes(key ecdsa.PublicKey, addrSet *[]net.Addr) error {
 		minerAddresses[n-1], minerAddresses[randIndex] = minerAddresses[randIndex], minerAddresses[n-1]
 	}
 
-	n := int(s.s.config.NumMinerToReturn)
-	if n > len(minerAddresses) {
-		n = len(minerAddresses)
-	}
-	*addrSet = minerAddresses[:n]
+	*addrSet = minerAddresses[:config.NumMinerToReturn]
 
 	return nil
 }
@@ -313,15 +275,15 @@ func (s *RServer) GetNodes(key ecdsa.PublicKey, addrSet *[]net.Addr) error {
 // Returns:
 // - UnknownKeyError if the server does not know a miner with this publicKey.
 func (s *RServer) HeartBeat(key ecdsa.PublicKey, _ignored *bool) error {
-	s.s.allMiners.Lock()
-	defer s.s.allMiners.Unlock()
+	allMiners.Lock()
+	defer allMiners.Unlock()
 
 	k := pubKeyToString(key)
-	if _, ok := s.s.allMiners.all[k]; !ok {
+	if _, ok := allMiners.all[k]; !ok {
 		return unknownKeyError
 	}
 
-	s.s.allMiners.all[k].RecentHeartbeat = time.Now().UnixNano()
+	allMiners.all[k].RecentHeartbeat = time.Now().UnixNano()
 
 	return nil
 }

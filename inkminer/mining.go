@@ -6,6 +6,8 @@ import (
 	"../blockartlib"
 	//"crypto/cipher"
 	"image"
+	"fmt"
+	"os"
 )
 
 func (i *InkMiner) GetBlock(hash string) (blockartlib.Block, bool) {
@@ -84,9 +86,9 @@ outer:
 // TODO: Complete this
 func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 	newState = State{}
-	newState.inkLevels = make(map[string]uint32)
+	newState.shapes = make(map[string]blockartlib.Shape)
 	newState.shapeOwners = make(map[string]string)
-	newState.shapes = make(map[string]string)
+	newState.inkLevels = make(map[string]uint32)
 
 	err = nil
 
@@ -145,34 +147,59 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 		}
 	}
 
-	// Check if we did not find a block to work with
+	// Check if we did not find a block to work with, if so generate a "blank state"
 	if !foundState {
 		lastState = State{}
-		lastState.shapes = make(map[string]string)
+		lastState.shapes = make(map[string]blockartlib.Shape)
 		lastState.shapeOwners = make(map[string]string)
 		lastState.inkLevels = make(map[string]uint32)
 	}
 
 	// Now, attempt to work through the worklist
-	for i := len(workListStack) - 1; i > 0; i-- {
-		workingBlock := workListStack[i]
-		createdState := foundState
+	for pos := len(workListStack) - 1; pos > 0; pos-- {
+		workingBlock := workListStack[pos]
+		createdState := lastState
+
+		// For each operation, add each entry
 		for _, op := range workingBlock.Records {
-			
+			pubkey := op.PubKey
+			opCost := op.InkCost
+			shape := op.Shape
+			shapeHash := op.ShapeHash
+			createdState.shapes[shapeHash] = shape
+			createdState.shapeOwners[shapeHash] = pubkey
+			if createdState.inkLevels[pubkey] > opCost {
+				createdState.inkLevels[pubkey] = createdState.inkLevels[pubkey] - opCost
+			} else {
+				fmt.Println("Ink levels somehow became lower than 0...")
+				createdState.inkLevels[pubkey] = 0
+			}
 		}
+		workingBlockHash, err := workingBlock.Hash()
+		if err != nil {
+			fmt.Println("Error hashing block")
+		}
+
+		// Gives reward based on the block
+		if len(workingBlock.Records) > 0 {
+			// Operation block
+			createdState.inkLevels[workingBlockHash] += i.settings.InkPerOpBlock
+		} else {
+			// NoOp block
+			createdState.inkLevels[workingBlockHash] += i.settings.InkPerNoOpBlock
+		}
+
+		// Update the states
+		i.states[workingBlockHash] = createdState
+		// Set the state walker with the newest state
+		lastState = createdState
 	}
 
-	//// If the block is not a genesis block, and no errors were encountered
-	//for (block.PrevBlock != "") && (err == nil) {
-	//	//
-	//
-	//	block, ok := i.mu.blockchain[block.PrevBlock]
-	//	if !ok {
-	//		return newState, blockartlib.InvalidBlockHashError(block.PrevBlock)
-	//	}
-	//
-	//	workListStack = append(workListStack, block)
-	//}
+	newState, ok = i.states[blockHash]
+	if !ok {
+		fmt.Println("This should never occur...")
+		return newState, blockartlib.InvalidBlockHashError(blockHash)
+	}
 
 	return newState, err
 }

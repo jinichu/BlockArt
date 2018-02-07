@@ -6,7 +6,7 @@ import crypto "../crypto"
 
 type Operation struct {
 	OpType      OpType // Type of operation
-	Shape       string // SVG string of this shape
+	Shape       Shape  // Shape object
 	ShapeHash   string // Hash of the SVG string
 	OpSig       OpSig  // Signature of the operation, signed by an ArtNode
 	PubKey      string // Public key of the ArtNode that created this operation
@@ -19,6 +19,11 @@ type OpSig struct {
 	S string
 }
 
+type Shape struct {
+	Svg    string // SVG string of this shape
+	Fill   string
+	Stroke string
+}
 type AddShapeResponse struct {
 	BlockHash    string
 	InkRemaining uint32

@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"log"
 	"testing"
 
 	"../blockartlib"
@@ -11,6 +12,8 @@ import (
 func TestSimpleCluster(t *testing.T) {
 	ts := NewTestCluster(t, 1)
 	defer ts.Close()
+
+	log.Printf("cluster up")
 }
 
 func TestClusterP2P(t *testing.T) {
