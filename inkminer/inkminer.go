@@ -42,6 +42,9 @@ type InkMiner struct {
 		blockchain map[string]blockartlib.Block
 		// all operations that haven't been added to the current block chain
 		mempool map[string]blockartlib.Operation
+
+		// closed is whether the miner is closed, mostly used for tests
+		closed bool
 	}
 }
 
@@ -149,6 +152,7 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	i.settings = resp
 
 	go i.peerDiscoveryLoop()
+	go i.heartbeatLoop()
 
 	for {
 		select {
@@ -172,6 +176,15 @@ func (i *InkMiner) Listen(serverAddr string) error {
 func (i *InkMiner) Close() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+
+	if i.mu.closed {
+		return nil
+	}
+	i.mu.closed = true
+
+	if err := i.client.Close(); err != nil {
+		return err
+	}
 
 	i.stopper.Stop()
 

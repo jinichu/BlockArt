@@ -59,6 +59,17 @@ type TestCluster struct {
 	t *testing.T
 }
 
+var heartbeatTime uint32 = 10000
+
+// SetHeartBeat sets the amount of time between heartbeats.
+func SetHeartBeat(time uint32) func() {
+	old := heartbeatTime
+	heartbeatTime = time
+	return func() {
+		heartbeatTime = old
+	}
+}
+
 func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 	ts := &TestCluster{
 		t: t,
@@ -75,7 +86,7 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		MinerSettings: server.MinerNetSettings{
 			MinerSettings: server.MinerSettings{
 				MinNumMinerConnections: uint8(min),
-				HeartBeat:              10000,
+				HeartBeat:              heartbeatTime,
 			},
 		},
 	}

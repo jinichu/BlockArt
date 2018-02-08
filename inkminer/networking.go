@@ -23,6 +23,24 @@ func dialRPC(addr string) (*rpc.Client, error) {
 	return rpc.NewClient(conn), nil
 }
 
+func (i *InkMiner) heartbeatLoop() {
+	// send tick twice as fast as required to avoid timeouts
+	duration := time.Millisecond * time.Duration(i.settings.HeartBeat) / 2
+	ticker := time.NewTicker(duration)
+	for {
+		select {
+		case <-ticker.C:
+		case <-i.stopper.ShouldStop():
+			return
+		}
+
+		var resp bool
+		if err := i.client.Call("RServer.HeartBeat", i.privKey.PublicKey, &resp); err != nil {
+			i.log.Printf("HeartBeat error: %s", err)
+		}
+	}
+}
+
 func (i *InkMiner) peerDiscover() error {
 	if i.NumPeers() >= int(i.settings.MinNumMinerConnections) {
 		return nil

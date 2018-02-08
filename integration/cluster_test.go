@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	"../blockartlib"
 	"../inkminer"
@@ -14,6 +15,35 @@ func TestSimpleCluster(t *testing.T) {
 	defer ts.Close()
 
 	log.Printf("cluster up")
+}
+
+func TestClusterHeartBeat(t *testing.T) {
+	heartbeat := uint32(10)
+	defer SetHeartBeat(heartbeat)()
+
+	nodes := 2
+	ts := NewTestCluster(t, nodes)
+	defer ts.Close()
+
+	SucceedsSoon(t, func() error {
+		n := ts.Server.NumMiners()
+		if n != nodes {
+			return fmt.Errorf("expected %d miners, got %d", nodes, n)
+		}
+		return nil
+	})
+
+	ts.Miners[1].Close()
+
+	time.Sleep(time.Duration(heartbeat) * time.Millisecond * 5)
+
+	SucceedsSoon(t, func() error {
+		n := ts.Server.NumMiners()
+		if n != 1 {
+			return fmt.Errorf("expected %d miners, got %d", 1, n)
+		}
+		return nil
+	})
 }
 
 func TestClusterP2P(t *testing.T) {
