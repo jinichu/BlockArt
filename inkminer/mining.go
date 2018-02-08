@@ -5,9 +5,7 @@ import (
 
 	"../blockartlib"
 	//"crypto/cipher"
-	"image"
 	"fmt"
-	"os"
 )
 
 func (i *InkMiner) GetBlock(hash string) (blockartlib.Block, bool) {
@@ -102,6 +100,11 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 	}
 
 	if block.PrevBlock == "" {
+		// Invalid block, is it a genesis block
+		return newState, nil
+	}
+
+	if block.PrevBlock == i.settings.GenesisBlockHash {
 		// Block is a genesis block; the state is blank
 		return newState, nil
 	}
@@ -204,11 +207,31 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 	return newState, err
 }
 
-func (i *InkMiner) retrieveState(blockHash string) {
-
+func (i *InkMiner) retrieveState(blockHash string) (retState State, err error){
+	if retState, ok := i.states[blockHash]; !ok {
+		return State{}, blockartlib.InvalidBlockHashError(blockHash)
+	} else {
+		return retState, nil
+	}
 }
 
 // Starts from the
-func (i *InkMiner) autoAddStates() {
+//func (i *InkMiner) autoAddStates() bool {
+//
+//}
 
+
+// Returns true if the inkCost in valid in the state
+// TODO: Complete this
+// !!!
+func (i *InkMiner) ValidateInkCost(inkCost int, pubKey string) bool {
+	return false // stub
+}
+
+
+// Returns true if the given shape is valid to add in the state
+// TODO: Complete this
+// !!!
+func (i *InkMiner) ValidateShapeOperation(shape blockartlib.Shape, pubKey string) bool {
+	return false // stub
 }

@@ -65,6 +65,16 @@ func getOutboundIP() string {
 	return localAddr.IP.String()
 }
 
+/*
+addr      string							// IP Address of the InkMiner
+client    *rpc.Client       				// RPC client to connect to the server
+
+latest        []*blockartlib.Block         	// Latest blocks in the blockchain
+settings      server.MinerNetSettings 		// Settings for this BlockArt network instance
+stopper       *stopper.Stopper
+
+*/
+
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	i := &InkMiner{
 		states:  make(map[string]State),
@@ -88,6 +98,10 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	if err := i.rs.Register(i.RPC()); err != nil {
 		return nil, err
 	}
+
+	// Initialize the map and channel variables
+	i.states = make(map[string]State)
+	i.mineBlockChan = make(chan blockartlib.Block)
 
 	return i, nil
 }
