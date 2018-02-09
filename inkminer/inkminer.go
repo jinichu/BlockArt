@@ -182,6 +182,8 @@ func (i *InkMiner) Close() error {
 	}
 	i.mu.closed = true
 
+	i.log.Printf("closing...")
+
 	if err := i.client.Close(); err != nil {
 		return err
 	}

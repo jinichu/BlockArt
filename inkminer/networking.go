@@ -104,6 +104,7 @@ func (i *InkMiner) addPeer(address string) (*peer, error) {
 		if err := p.sendHello(i); err != nil {
 			return nil, err
 		}
+		go i.peerHeartBeat(p)
 	}
 
 	return p, nil
@@ -174,6 +175,16 @@ func (i *InkMinerRPC) Hello(req HelloRequest, resp *HelloResponse) error {
 			}
 		}
 	}()
+
+	return nil
+}
+
+func (i *InkMinerRPC) HeartBeat(req struct{}, resp *struct{}) error {
+	select {
+	case <-i.i.stopper.ShouldStop():
+		return errors.New("server is closing...")
+	default:
+	}
 
 	return nil
 }
@@ -296,6 +307,54 @@ func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockRespo
 
 	// if it's a new block, announce it to all peers
 	return i.i.announceBlock(req.Block)
+}
+
+func (i *InkMiner) removePeer(p *peer) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	delete(i.mu.peers, p.address)
+	return p.rpc.Close()
+}
+
+func (i *InkMiner) peerHeartBeat(p *peer) {
+	timeout := time.Millisecond * time.Duration(i.settings.HeartBeat)
+	duration := timeout / 2
+	ticker := time.NewTicker(duration)
+
+	remove := func() {
+		i.log.Printf("peer timed out: %s", p)
+		if err := i.removePeer(p); err != nil {
+			i.log.Printf("failed to remove peer: %s", err)
+		}
+	}
+
+	for {
+		select {
+		case <-i.stopper.ShouldStop():
+			return
+		case <-ticker.C:
+		}
+
+		i.log.Printf("sending heartbeat to: %s", p)
+		var resp struct{}
+		call := p.rpc.Go("InkMinerRPC.HeartBeat", struct{}{}, &resp, nil)
+
+		select {
+		case <-i.stopper.ShouldStop():
+			return
+		case reply := <-call.Done:
+			if reply.Error != nil {
+				i.log.Printf("got heartbeat error: %s", reply.Error)
+				remove()
+				return
+			}
+			i.log.Printf("got heartbeat from: %s", p)
+		case <-time.After(timeout):
+			remove()
+			return
+		}
+	}
 }
 
 type peer struct {

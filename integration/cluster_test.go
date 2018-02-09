@@ -169,6 +169,37 @@ func TestClusterOperationPropagation(t *testing.T) {
 	})
 }
 
+func TestClusterMinerHeartBeat(t *testing.T) {
+	heartbeat := uint32(10)
+	defer SetHeartBeat(heartbeat)()
+
+	nodes := 2
+	ts := NewTestCluster(t, nodes)
+	defer ts.Close()
+
+	SucceedsSoon(t, func() error {
+		n := ts.Miners[0].NumPeers()
+		want := nodes - 1
+		if n != want {
+			return fmt.Errorf("expected %d peers, got %d", want, n)
+		}
+		return nil
+	})
+
+	ts.Miners[1].Close()
+
+	time.Sleep(time.Duration(heartbeat) * time.Millisecond * 5)
+
+	SucceedsSoon(t, func() error {
+		n := ts.Miners[0].NumPeers()
+		want := 0
+		if n != want {
+			return fmt.Errorf("expected %d peers, got %d", want, n)
+		}
+		return nil
+	})
+}
+
 func TestSimpleClusterBlockPropagateOnJoin(t *testing.T) {
 	ts := NewTestCluster(t, 1)
 	defer ts.Close()
