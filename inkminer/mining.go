@@ -40,8 +40,32 @@ func (i *InkMiner) startMining() error {
 // mineBlock returns the nonce, whether or not it found a valid nonce and an
 // error.
 func (i *InkMiner) mineWorker(block blockartlib.Block, oldNonce uint32, maxIterations int) (uint32, bool, error) {
-	// TODO: spin up goroutines for mining
-	return 0, false, ErrUnimplemented
+	difficulty := i.settings.PoWDifficultyOpBlock
+	if len(block.Records) == 0 {
+		difficulty = i.settings.PoWDifficultyNoOpBlock
+	}
+
+	for i := 0; i < maxIterations; i++ {
+		oldNonce += 1
+		block.Nonce = oldNonce
+		hash, err := block.Hash()
+		if err != nil {
+			return 0, false, err
+		}
+		if uint8(numZeros(hash)) == difficulty {
+			return oldNonce, true, nil
+		}
+	}
+	return oldNonce, false, nil
+}
+
+func numZeros(str string) int {
+	for i, c := range str {
+		if c != '0' {
+			return i
+		}
+	}
+	return len(str)
 }
 
 func (i *InkMiner) minerLoop(blocks chan blockartlib.Block) {
