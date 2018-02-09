@@ -2,10 +2,10 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
-	"crypto/rand"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"net/rpc"
+	"time"
 
 	crypto "../crypto"
 )
@@ -22,11 +22,6 @@ type ArtNode struct {
 // - InvalidShapeSvgStringError
 // - ShapeSvgStringTooLongError
 func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgString string, fill string, stroke string) (shapeHash string, blockHash string, inkRemaining uint32, err error) {
-	r, s, err := sign([]byte(string(ADD)), a.privKey)
-	if err != nil {
-		return "", "", 0, err
-	}
-
 	inkCost, err := calculateInkCost(shapeSvgString, fill, stroke)
 	if err != nil {
 		return "", "", 0, err
@@ -48,15 +43,30 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		return "", "", 0, err
 	}
 
+	id := time.Now().String()
+
 	args := Operation{
 		OpType:      ADD,
 		Shape:       shape,
-		OpSig:       OpSig{r, s},
+		OpSig:       OpSig{},
 		PubKey:      publicKey,
 		InkCost:     inkCost,
 		ShapeHash:   shapeHash,
 		ValidateNum: validateNum,
+		Id:          id,
 	}
+
+	bytes, err := json.Marshal(args)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	r, s, err := crypto.Sign(bytes, a.privKey)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	args.OpSig = OpSig{r, s}
 
 	var resp AddShapeResponse
 	err = a.client.Call("InkMinerRPC.AddShape", args, &resp)
@@ -107,23 +117,33 @@ func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
 // - OutOfBoundsError
 // - ShapeOverlapError
 func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining uint32, err error) {
-	r, s, err := sign([]byte(string(DELETE)), a.privKey)
-	if err != nil {
-		return 0, err
-	}
-
 	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
 	if err != nil {
 		return 0, err
 	}
 
+	id := time.Now().String()
+
 	args := Operation{
 		OpType:      DELETE,
-		OpSig:       OpSig{r, s},
+		OpSig:       OpSig{},
 		PubKey:      publicKey,
 		ShapeHash:   shapeHash,
 		ValidateNum: validateNum,
+		Id:          id,
 	}
+
+	bytes, err := json.Marshal(args)
+	if err != nil {
+		return 0, err
+	}
+
+	r, s, err := crypto.Sign(bytes, a.privKey)
+	if err != nil {
+		return 0, err
+	}
+
+	args.OpSig = OpSig{r, s}
 
 	var resp uint32
 
@@ -209,16 +229,4 @@ func calculateInkCost(shapeSvgString string, fill string, stroke string) (cost u
 // - ShapeSvgStringTooLong Error
 func svgStringValidityCheck(svgString string) (err error) {
 	return errors.New("Not implemented")
-}
-
-// Provides a sig for an operation
-func sign(operation []byte, privKey ecdsa.PrivateKey) (signedR, signedS string, err error) {
-	r, s, err := ecdsa.Sign(rand.Reader, &privKey, operation)
-	if err != nil {
-		return "", "", err
-	}
-
-	signedR = fmt.Sprint(r)
-	signedS = fmt.Sprint(s)
-	return
 }
