@@ -198,24 +198,53 @@ func (i *InkMiner) announceBlock(block blockartlib.Block) error {
 func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockResponse) error {
 	// TODO: validate block
 
-	hash, err := req.Block.Hash()
+	success, err := i.i.AddBlock(req.Block)
 	if err != nil {
 		return err
 	}
 
-	i.i.mu.Lock()
-	_, ok := i.i.mu.blockchain[hash]
-	if !ok {
-		i.i.mu.blockchain[hash] = req.Block
-	}
-	i.i.mu.Unlock()
-
-	if ok {
+	// If we didn't end up adding the block at all
+	if !success {
 		return nil
 	}
 
 	// if it's a new block, announce it to all peers
 	return i.i.announceBlock(req.Block)
+}
+
+// Helper Function: Adds block to the InkMiner
+func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error){
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	hash, err := block.Hash()
+	if err != nil {
+		return false, err
+	}
+
+	_, ok := i.mu.blockchain[hash]
+	if !ok {
+		// Check every block in the latest queue
+		newLatest := false
+		for _, blk := range i.latest {
+			//
+			if block.BlockNum > blk.BlockNum {
+				i.latest = append([]*blockartlib.Block{}, &block)
+				newLatest = true
+				break
+			}
+		}
+
+		// If we did not clean out the latest list at all
+		if !newLatest {
+
+		}
+		i.mu.blockchain[hash] = block
+	} else {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 type peer struct {

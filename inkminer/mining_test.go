@@ -6,24 +6,58 @@ import (
 	"math/rand"
 	"strconv"
 	"../blockartlib"
-	"fmt"
+	//"fmt"
+	//"crypto/ecdsa"
 )
 
 func TestInkMiner_CalculateState(t *testing.T) {
 	inkMiner := generateTestInkMiner()
 
+/*
+	PrevBlock string          // Hash of the previous block
+	BlockNum  int             // Block number
+	Records   []Operation     // Set of operation records
+	PubKey    ecdsa.PublicKey // Public key of the InkMiner that mined this block
+	Nonce     uint32
+*/
+
+	// Generate Block 1
 	newBlock := blockartlib.Block{}
 	newBlock.BlockNum = 1
 	newBlock.PrevBlock = inkMiner.settings.GenesisBlockHash
 	pubKeyValue, err := crypto.UnmarshalPublic(inkMiner.publicKey)
 	if err != nil {
-		fmt.Println("Error unmarshalling public key")
+		t.Fatal("Error unmarshalling public key")
 	}
 	newBlock.PubKey = *pubKeyValue
 
 	// Determine a random nonce for the newBlock
 	newBlock.Nonce = 4
+	lastBlockHash, err := newBlock.Hash()
+	if err != nil {
+		t.Fatal("Unable to retrieve the hash of the first TestBlock")
+	}
 
+	// Newer block
+	newBlock = blockartlib.Block{}
+	newBlock.PrevBlock = lastBlockHash
+	newBlock.BlockNum = 2
+	pubKeyValue, err = crypto.UnmarshalPublic(inkMiner.publicKey)
+	if err != nil {
+		t.Fatal("Error unmarshalling public key")
+	}
+
+	// Calculate two blocks at once and test
+
+
+	// Create a new Block and append
+
+	// Calculate one block and test
+
+
+
+
+	//newBlock.Nonce =
 	//
 
 
@@ -68,35 +102,11 @@ func generateTestInkMiner() *InkMiner{
 	if err != nil {
 		return nil
 	}
+
 	inkMiner, err := New(privKey)
 	if err != nil {
 		return nil
 	}
-	return inkMiner
-
-
-
-	//inkMiner.privKey = privKey
-	//inkMiner.publicKey, err = crypto.MarshalPublic(&privKey.PublicKey)
-	//if err != nil {
-	//	return nil
-	//}
-	//
-	//inkMiner.settings = blockartlib.MinerNetSettings{}
-	//// Generate genesis block
-	//genesisBlock := blockartlib.Block{}
-	//genesisBlock.Nonce = 100 // Default
-	//genesisBlock.BlockNum = 0
-	//genesisBlock.Records = []blockartlib.Operation{}
-	//genesisBlock.PrevBlock = ""
-	//
-	//inkMiner.settings.GenesisBlockHash, err = crypto.Hash(genesisBlock)
-	//if err != nil {
-	//	return nil
-	//}
-	//// TODO: Include other elements for the settings struct?
-
-
 
 	return inkMiner
 }

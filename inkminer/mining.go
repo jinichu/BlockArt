@@ -73,6 +73,8 @@ outer:
 			// Check if there's a new block to mine on instead.
 			select {
 			case block = <-blocks:
+			case <-i.stopper.ShouldStop():
+				return
 			default:
 			}
 		}
@@ -96,6 +98,7 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 	// Check if the block exists on the blockchain, fail if not found
 	block, ok := i.mu.blockchain[blockHash]
 	if !ok {
+		i.log.Println("Invalid blockhash")
 		return newState, blockartlib.InvalidBlockHashError(blockHash)
 	}
 
@@ -127,6 +130,7 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 		block, ok := i.mu.blockchain[nextHash]
 		// If we didn't find the next block, something went wrong
 		if !ok {
+			i.log.Println("Invalid blockhash")
 			err = blockartlib.InvalidBlockHashError(nextHash)
 			return newState, err
 		}
@@ -200,7 +204,7 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 
 	newState, ok = i.states[blockHash]
 	if !ok {
-		fmt.Println("This should never occur...")
+		i.log.Println("This should never occur...")
 		return newState, blockartlib.InvalidBlockHashError(blockHash)
 	}
 
@@ -229,7 +233,7 @@ func (i *InkMiner) ValidateInkCost(inkCost int, pubKey string) bool {
 }
 
 
-// Returns true if the given shape is valid to add in the state
+// Returns true if the given shape is valid to add in the state (does not conflict with something else)
 // TODO: Complete this
 // !!!
 func (i *InkMiner) ValidateShapeOperation(shape blockartlib.Shape, pubKey string) bool {
