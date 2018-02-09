@@ -24,3 +24,14 @@ func (i *InkMiner) isOperationValid(operation blockartlib.Operation) bool {
 
 	return ecdsa.Verify(pubKey, bytes, opSig.R, opSig.S)
 }
+
+func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) bool {
+	blockHash, err := block.Hash()
+	if err != nil {
+		return false
+	}
+	if uint8(numZeros(blockHash)) == i.settings.PoWDifficultyOpBlock {
+		return true
+	}
+	return false
+}
