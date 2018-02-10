@@ -17,19 +17,19 @@ import (
 )
 
 type InkMiner struct {
-	addr      string							// IP Address of the InkMiner
-	client    *rpc.Client       				// RPC client to connect to the server
-	privKey   *ecdsa.PrivateKey 				// Pub/priv key pair of this InkMiner
-	publicKey string							// Public key of the Miner (Note: is this needed?)
+	addr      string            // IP Address of the InkMiner
+	client    *rpc.Client       // RPC client to connect to the server
+	privKey   *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
+	publicKey string            // Public key of the Miner (Note: is this needed?)
 
-	latest        []*blockartlib.Block         	// Latest blocks in the blockchain
-	settings      server.MinerNetSettings 		// Settings for this BlockArt network instance
-	currentHead   blockartlib.Block       		// Block that InkMiner is mining on (current head)
-	mineBlockChan chan blockartlib.Block 		// Channel used to distribute blocks
-	rs            *rpc.Server 					// RPC Server
-	states        map[string]State 				// States of the canvas at a given block
-	stopper       *stopper.Stopper				// TODO: [Jonathan] Figure what this is
-	log           *log.Logger					// TODO: [Jonathan] Figure what this is
+	latest        []*blockartlib.Block    // Latest blocks in the blockchain
+	settings      server.MinerNetSettings // Settings for this BlockArt network instance
+	currentHead   blockartlib.Block       // Block that InkMiner is mining on (current head)
+	mineBlockChan chan blockartlib.Block  // Channel used to distribute blocks
+	rs            *rpc.Server             // RPC Server
+	states        map[string]State        // States of the canvas at a given block
+	stopper       *stopper.Stopper        // TODO: [Jonathan] Figure what this is
+	log           *log.Logger             // TODO: [Jonathan] Figure what this is
 
 	mu struct {
 		sync.Mutex

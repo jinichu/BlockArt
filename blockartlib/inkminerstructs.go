@@ -29,6 +29,7 @@ type Shape struct {
 	Fill   string
 	Stroke string
 }
+
 type AddShapeResponse struct {
 	BlockHash    string
 	InkRemaining uint32
