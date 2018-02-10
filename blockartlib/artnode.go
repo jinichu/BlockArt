@@ -206,7 +206,6 @@ func (a *ArtNode) GetChildren(blockHash string) (blockHashes []string, err error
 // Closes the canvas/connection to the BlockArt network.
 // - DisconnectedError
 func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
-	// TODO: client.Call("InkMinerRPC.GetInk", args, &resp)
 	var resp uint32
 
 	err = a.client.Call("InkMinerRPC.GetInk", "", &resp)

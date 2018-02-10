@@ -9,7 +9,8 @@ import (
 	crypto "../crypto"
 )
 
-func (i *InkMiner) isOperationValid(operation blockartlib.Operation) bool {
+// Returns true if op-sig is valid
+func (i *InkMiner) isOpSigValid(operation blockartlib.Operation) bool {
 	opSig := operation.OpSig
 	operation.OpSig = blockartlib.OpSig{}
 	pubKey, err := crypto.UnmarshalPublic(operation.PubKey)
@@ -25,6 +26,7 @@ func (i *InkMiner) isOperationValid(operation blockartlib.Operation) bool {
 	return ecdsa.Verify(pubKey, bytes, opSig.R, opSig.S)
 }
 
+// Returns true if this block has the correct nonce
 func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) bool {
 	blockHash, err := block.Hash()
 	if err != nil {
@@ -34,4 +36,18 @@ func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) bool {
 		return true
 	}
 	return false
+}
+
+// Returns true if the inkCost in valid in the state
+// TODO: Complete this
+// !!!
+func (i *InkMiner) isInkCostValid(inkCost int, pubKey string) bool {
+	return false // stub
+}
+
+// Returns true if the given shape is valid to add in the state (does not conflict with something else)
+// TODO: Complete this
+// !!!
+func (i *InkMiner) canAddShape(shape blockartlib.Shape, pubKey string) bool {
+	return false // stub
 }
