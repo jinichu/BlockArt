@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/rpc"
 	"time"
+	"strings"
+	"strconv"
 
 	crypto "../crypto"
 )
@@ -36,6 +38,16 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		Svg:    shapeSvgString,
 		Fill:   fill,
 		Stroke: stroke,
+	}
+
+	err = svgStringValidityCheck(shapeSvgString)
+	if err != nil {
+	      return "", "", 0, err
+	}
+
+	shapeHash, err = crypto.Hash(shapeSvgString)
+	if err != nil {
+		return "", "", 0, err
 	}
 
 	shapeHash, err = crypto.Hash(shape)
@@ -227,5 +239,61 @@ func calculateInkCost(shapeSvgString string, fill string, stroke string) (cost u
 // - InvalidShapeSvgString Error
 // - ShapeSvgStringTooLong Error
 func svgStringValidityCheck(svgString string) (err error) {
-	return errors.New("Not implemented")
+    if len(svgString) > 128 {
+        return ShapeSvgStringTooLongError(svgString)
+    }
+
+    if !isValidPath(svgString) {
+        return InvalidShapeSvgStringError(svgString)
+    }
+
+    return nil
+}
+
+func isValidPath(svgString string) bool {
+    i := 0
+    var operation string
+    arr := strings.Fields(svgString)
+
+    for {
+        if (i >= len(arr)) {
+            return true
+        }
+
+        operation = arr[i]
+
+        switch operation {
+            case "M", "m", "L", "l":
+                if i + 1 >= len(arr) || i + 2 >= len(arr) {
+                    return false
+                }
+                if !isNumeric(arr[i + 1]) || !isNumeric(arr[i + 2]) {
+                    return false
+                }
+                i += 3
+            case "H", "h", "V", "v":
+                if i + 1 >= len(arr) {
+                    return false
+                }
+                if !isNumeric(arr[i + 1]) {
+                    return false
+                }
+                i += 2
+            case "Z", "z":
+                if i + 1 >= len(arr) {
+                    return true
+                }
+                if isNumeric(arr[i + 1]) {
+                    return false
+                }
+                i += 1
+            default:
+                return false
+        }
+    }
+}
+
+func isNumeric(s string) bool {
+    _, err := strconv.ParseFloat(s, 64)
+    return err == nil
 }
