@@ -77,23 +77,60 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	// Determine a random nonce for the newBlock
 	newBlock.Nonce = 4
-	lastBlockHash, err := newBlock.Hash()
+	blockHash1, err := newBlock.Hash()
 	if err != nil {
 		t.Fatal("Unable to retrieve the hash of the first TestBlock")
 	}
+	inkMiner.AddBlock(newBlock)
 
 	// Newer block
 	newBlock = blockartlib.Block{}
-	newBlock.PrevBlock = lastBlockHash
+	newBlock.PrevBlock = blockHash1
 	newBlock.BlockNum = 2
 	pubKeyValue, err = crypto.UnmarshalPublic(inkMiner.publicKey)
 	if err != nil {
 		t.Fatal("Error unmarshalling public key")
 	}
+	newBlock.PubKey = *pubKeyValue
+	newBlock.Nonce = 15
+	blockHash2, err := newBlock.Hash()
+	if err != nil {
+		t.Fatal("Unable to retrieve the hash of the first TestBlock")
+	}
 
 	// Calculate two blocks at once and test
+	someState, err := inkMiner.CalculateState(blockHash2)
+	if err != nil {
+		t.Fatal("Error encountered when calculating state: ", err)
+	}
+
+	// Check if the inkLevels are updated
+	if someState.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock * 2 {
+		t.Fatal("ERROR: Incorrect inkLevels. Got: ", someState.inkLevels[inkMiner.publicKey],
+			" Expected: ", inkMiner.settings.InkPerNoOpBlock * 2)
+	}
+
+	// Check if the inkMiner contains the block
+	if _, ok := inkMiner.states[blockHash2]; !ok {
+		t.Log("ERROR: InkMIner has not saved the state to it's map")
+	}
+
+	// Check if the first block was computed properly
+	state1, ok := inkMiner.states[blockHash1]
+	if !ok {
+		t.Fatal("Block hash was not computed properly, invariant violated")
+	}
+
+	if state1.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock * 1 {
+		t.Fatal("ERROR: Incorrect inkLevels. Got: ", someState.inkLevels[inkMiner.publicKey],
+			" Expected: ", inkMiner.settings.InkPerNoOpBlock * 1)
+	}
+
+	
 
 	// Create a new Block and append
+	block3 := blockartlib.Block{}
+	block3.PrevBlock = blockHash2
 
 	// Calculate one block and test
 
