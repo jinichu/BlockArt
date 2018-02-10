@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
+	"math/big"
 )
 
 // GenerateKey generates a ECDSA public-private key pair.
@@ -102,4 +103,16 @@ func Hash(a interface{}) (string, error) {
 		return "", nil
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Provides a sig for an operation
+func Sign(operation []byte, privKey ecdsa.PrivateKey) (signedR, signedS *big.Int, err error) {
+	r, s, err := ecdsa.Sign(rand.Reader, &privKey, operation)
+	if err != nil {
+		return big.NewInt(0), big.NewInt(0), err
+	}
+
+	signedR = r
+	signedS = s
+	return
 }

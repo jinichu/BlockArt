@@ -1,6 +1,7 @@
 package inkminer
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -172,13 +173,15 @@ func generateTestInkMiner() *InkMiner {
 	rNum := rand.Int()%5 + 1
 	var basePath string = "../testkeys/test" + strconv.FormatInt(int64(rNum), 10)
 
-	privKey, err := crypto.LoadPrivate(basePath+"-public.key", basePath+"private.key")
+	privKey, err := crypto.LoadPrivate(basePath+"-public.key", basePath+"-private.key")
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
 	inkMiner, err := New(privKey)
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 

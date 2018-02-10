@@ -74,8 +74,8 @@ func numZeros(str string) int {
 func (i *InkMiner) minerLoop(blocks chan blockartlib.Block) {
 outer:
 	for {
-		block := <-blocks 			// Grab a block from the channel
-		nonce := uint32(0) 			//
+		block := <-blocks  // Grab a block from the channel
+		nonce := uint32(0) //
 		found := false
 		var err error
 		for {
@@ -108,7 +108,7 @@ outer:
 // Given a particular blockHash, generate a new state by walking through the blockchain
 // Automatically adds states if they do not exist already
 // TODO: Complete this
-func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
+func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) {
 	newState = State{}
 	newState.shapes = make(map[string]blockartlib.Shape)
 	newState.shapeOwners = make(map[string]string)
@@ -235,7 +235,7 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error){
 	return newState, err
 }
 
-func (i *InkMiner) retrieveState(blockHash string) (retState State, err error){
+func (i *InkMiner) retrieveState(blockHash string) (retState State, err error) {
 	if retState, ok := i.states[blockHash]; !ok {
 		return State{}, blockartlib.InvalidBlockHashError(blockHash)
 	} else {
@@ -247,19 +247,3 @@ func (i *InkMiner) retrieveState(blockHash string) (retState State, err error){
 //func (i *InkMiner) autoAddStates() bool {
 //
 //}
-
-
-// Returns true if the inkCost in valid in the state
-// TODO: Complete this
-// !!!
-func (i *InkMiner) ValidateInkCost(inkCost int, pubKey string) bool {
-	return false // stub
-}
-
-
-// Returns true if the given shape is valid to add in the state (does not conflict with something else)
-// TODO: Complete this
-// !!!
-func (i *InkMiner) ValidateShapeOperation(shape blockartlib.Shape, pubKey string) bool {
-	return false // stub
-}
