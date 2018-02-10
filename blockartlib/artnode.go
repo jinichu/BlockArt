@@ -6,8 +6,8 @@ import (
 	"errors"
 	"net/rpc"
 	"time"
-      "strings"
-      "strconv"
+	"strings"
+	"strconv"
 
 	crypto "../crypto"
 )
@@ -38,12 +38,12 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		Svg:    shapeSvgString,
 		Fill:   fill,
 		Stroke: stroke,
-      }
+	}
 
-      err = svgStringValidityCheck(shapeSvgString)
-      if err != nil {
-            return "", "", 0, err
-      }
+	err = svgStringValidityCheck(shapeSvgString)
+	if err != nil {
+	      return "", "", 0, err
+	}
 
 	shapeHash, err = crypto.Hash(shapeSvgString)
 	if err != nil {
