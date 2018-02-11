@@ -2,7 +2,59 @@ package blockartlib
 import (
 	"testing"
 	"math/rand"
+	"math"
 )
+
+//Testing LineCost
+func TestCalculateSimpleLineCost(t * testing.T) {
+	testPath := "M 0 10 H 20"
+	expectedResult := 20.0
+	actualResult := calculateLineCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestCalculateBentLineCost(t * testing.T) {
+	testPath := "M 50 50 L 100 100 l 25 0"
+	expectedResult := math.Sqrt(5000) + 25
+	actualResult := calculateLineCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestTrianglesLineCost(t * testing.T) {
+	testPath := "M 50 50 L 100 100 l 25 0 Z"
+	expectedResult := math.Sqrt(5000) + 25 + math.Sqrt(8125)
+	actualResult := calculateLineCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestIntersectingShapeOutlineCost(t * testing.T) {
+	testPath := "M 550 200 L 450 300 L 350 200 L 450 200 L 500 250 L 550 300"
+	expectedResult := (6 * math.Sqrt(5000)) + 100
+	actualResult := calculateLineCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestIntersectingLinesCost(t * testing.T) {
+	testPath := "M 250 200 L 400 200 M 300 100 L 300 250"
+	expectedResult := 300.0
+	actualResult := calculateLineCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
 
 // Testing svgStringValidityCheck
 func TestValidShapeSvgString(t *testing.T) {
@@ -35,6 +87,7 @@ func TestTooLongShapeSvgString(t *testing.T) {
 
 func TestInvalidPathSvgString(t *testing.T) {
 	testPaths := []string{
+		"",
 		"M 0 10 H 20 Z 30",
 		"M 0 10 H 20 z 30",
 		"M 0 10 H 20 10 z",
@@ -144,17 +197,17 @@ func TestInvalidPathLackingLocationInput(t *testing.T) {
 
 // HELPERS Generate random string 
 func generateRandomString(n int) (res string) {
-    var alphabet = []rune("abcdefghijklmnopqrstuvwxyz")
- 
-    x := make([]rune, n)
-    for i := range x {
-        x[i] = alphabet[rand.Intn(len(alphabet))]
-    }
-    res = string(x)
-    return
+	var alphabet = []rune("abcdefghijklmnopqrstuvwxyz")
+
+	x := make([]rune, n)
+	for i := range x {
+		x[i] = alphabet[rand.Intn(len(alphabet))]
+	}
+	res = string(x)
+	return
 }
 
 func nilFunc() error {
-    return nil
+	return nil
 }
 
