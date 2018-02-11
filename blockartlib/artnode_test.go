@@ -5,6 +5,48 @@ import (
 	"math"
 )
 
+// Testing Fill Cost
+func TestCalculateSimpleFillCost(t * testing.T) {
+	testPath := "M 0 0 H 20 V 20 h -20 Z"
+	expectedResult := 400.0
+	actualResult := calculateFillCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestCalculateComplexPolygon(t * testing.T) {
+	testPath := "M 400 300 L 350 250 L 300 250 L 350 200 L 300 150 L 350 100 L 400 150 L 400 200 L 450 200 L 400 250 L 400 300"
+	expectedResult := 12500.0
+	actualResult := calculateFillCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestCalculateComplexPolygon2(t * testing.T) {
+	testPath := "M 400 250 L 450 200 L 400 150 L 400 200 L 350 200 L 400 250"
+	expectedResult := 3750.0
+	actualResult := calculateFillCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+func TestCalculateComplexPolygon3(t * testing.T) {
+	testPath := "M 390 240 L 450 210 L 390 210 L 360 150 L 330 210 L 300 240 L 300 330 L 390 300 L 390 240 "
+	expectedResult := 11700.0
+	actualResult := calculateFillCost(testPath)
+
+	if actualResult != expectedResult {
+		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
+	}
+}
+
+
 //Testing LineCost
 func TestCalculateSimpleLineCost(t * testing.T) {
 	testPath := "M 0 10 H 20"
