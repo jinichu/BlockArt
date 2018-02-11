@@ -8,8 +8,7 @@ import (
 
 	"../blockartlib"
 	"../crypto"
-	//"fmt"
-	//"crypto/ecdsa"
+	"../server"
 )
 
 func TestNumZeros(t *testing.T) {
@@ -56,8 +55,10 @@ func TestMineWorker(t *testing.T) {
 }
 
 func TestInkMiner_CalculateState(t *testing.T) {
-	inkMiner := generateTestInkMiner()
-
+	inkMiner, err := generateTestInkMiner()
+	if err != nil {
+		t.Fatal("Unable to create inkMiner due to: ", err)
+	}
 	/*
 		PrevBlock string          // Hash of the previous block
 		BlockNum  int             // Block number
@@ -67,37 +68,35 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	*/
 
 	// Generate Block 1
-	newBlock := blockartlib.Block{}
-	newBlock.BlockNum = 1
-	newBlock.PrevBlock = inkMiner.settings.GenesisBlockHash
+	block1 := blockartlib.Block{}
+	block1.BlockNum = 1
+	block1.PrevBlock = inkMiner.settings.GenesisBlockHash
 	pubKeyValue, err := crypto.UnmarshalPublic(inkMiner.publicKey)
 	if err != nil {
 		t.Fatal("Error unmarshalling public key")
 	}
-	newBlock.PubKey = *pubKeyValue
+	block1.PubKey = *pubKeyValue
 
 	// Determine a random nonce for the newBlock
-	newBlock.Nonce = 4
-	blockHash1, err := newBlock.Hash()
+	block1.Nonce = 4
+	blockHash1, err := block1.Hash()
 	if err != nil {
 		t.Fatal("Unable to retrieve the hash of the first TestBlock")
 	}
-	inkMiner.AddBlock(newBlock)
+	inkMiner.AddBlock(block1)
 
 	// Newer block
-	newBlock = blockartlib.Block{}
-	newBlock.PrevBlock = blockHash1
-	newBlock.BlockNum = 2
-	pubKeyValue, err = crypto.UnmarshalPublic(inkMiner.publicKey)
-	if err != nil {
-		t.Fatal("Error unmarshalling public key")
-	}
-	newBlock.PubKey = *pubKeyValue
-	newBlock.Nonce = 15
-	blockHash2, err := newBlock.Hash()
+	block2 := blockartlib.Block{}
+	block2.PrevBlock = blockHash1
+	block2.BlockNum = 2
+	block2.PubKey = *pubKeyValue
+	block2.Nonce = 15
+	blockHash2, err := block2.Hash()
 	if err != nil {
 		t.Fatal("Unable to retrieve the hash of the first TestBlock")
 	}
+
+	inkMiner.AddBlock(block2)
 
 	// Calculate two blocks at once and test
 	someState, err := inkMiner.CalculateState(blockHash2)
@@ -106,9 +105,9 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	}
 
 	// Check if the inkLevels are updated
-	if someState.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock * 2 {
+	if someState.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock*2 {
 		t.Fatal("ERROR: Incorrect inkLevels. Got: ", someState.inkLevels[inkMiner.publicKey],
-			" Expected: ", inkMiner.settings.InkPerNoOpBlock * 2)
+			" Expected: ", inkMiner.settings.InkPerNoOpBlock*2)
 	}
 
 	// Check if the inkMiner contains the block
@@ -122,25 +121,50 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		t.Fatal("Block hash was not computed properly, invariant violated")
 	}
 
-	if state1.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock * 1 {
-		t.Fatal("ERROR: Incorrect inkLevels. Got: ", someState.inkLevels[inkMiner.publicKey],
-			" Expected: ", inkMiner.settings.InkPerNoOpBlock * 1)
+	if state1.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock*1 {
+		t.Fatal("ERROR: Incorrect inkLevels. Got: ", state1.inkLevels[inkMiner.publicKey],
+			" Expected: ", inkMiner.settings.InkPerNoOpBlock*1)
 	}
 
-	
-
 	// Create a new Block and append
+	// New block contains a record that has 5 cost
 	block3 := blockartlib.Block{}
 	block3.PrevBlock = blockHash2
+	block3.BlockNum = 3
+	operation := blockartlib.Operation{}
+	operation.InkCost = 5
+	operation.PubKey = inkMiner.publicKey
+	block3.Records = []blockartlib.Operation{operation}
+	block3.PubKey = *pubKeyValue
+	block3.Nonce = 22441
 
-	// Calculate one block and test
+	block3Hash, err := block3.Hash()
+	if err != nil {
+		t.Fatal("ERROP: Unable to hash Block3")
+	}
 
-	//newBlock.Nonce =
-	//
+	success, err := inkMiner.AddBlock(block3)
+	if err != nil || success == false {
+		t.Fatal("Unable to add block3 to the blockchain")
+	}
 
+	// Check if the state was computed correctly
+
+	inkMiner.CalculateState(block3Hash)
+	state3, ok := inkMiner.states[block3Hash]
+	if !ok {
+		t.Fatal("Block State 3 was not stored correctly")
+	}
+
+	expectedInkLevels := inkMiner.settings.InkPerNoOpBlock*2 + inkMiner.settings.InkPerOpBlock - 5
+
+	if state3.inkLevels[inkMiner.publicKey] != expectedInkLevels {
+		t.Fatal("ERROR: Incorrect inkLevels. Got: ", state3.inkLevels[inkMiner.publicKey],
+			" Expected: ", expectedInkLevels)
+	}
 }
 
-func generateTestInkMiner() *InkMiner {
+func generateTestInkMiner() (*InkMiner, error) {
 	/*
 		addr      string							// IP Address of the InkMiner
 		client    *rpc.Client       				// RPC client to connect to the server
@@ -176,14 +200,32 @@ func generateTestInkMiner() *InkMiner {
 	privKey, err := crypto.LoadPrivate(basePath+"-public.key", basePath+"-private.key")
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
+
+	//publicKey, err := crypto.UnmarshalPublic("-----BEGIN EC PRIVATE KEY-----MHcCAQEEILPTz2axlGpLMPNsRZbjViv0tTfbYrtHHYDE0MXL3wQzoAoGCCqGSM49AwEHoUQDQgAE8d5kb89KLirtIuEEcfOIuUSIlVy2KkgGBc5CrZXaIxwHl17sfQxDx8Ps5M1hsBm2GzeHdUbUnn5M4iX1sg15yg==-----END EC PRIVATE KEY-----")
+	//if err != nil {
+	//	return nil, err
+	//}
+	//privateKey, err := crypto.UnmarshalPrivate("-----BEGIN PUBLIC KEY-----MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8d5kb89KLirtIuEEcfOIuUSIlVy2KkgGBc5CrZXaIxwHl17sfQxDx8Ps5M1hsBm2GzeHdUbUnn5M4iX1sg15yg==-----END PUBLIC KEY-----")
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	//privateKey.PublicKey = *publicKey
 
 	inkMiner, err := New(privKey)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 
-	return inkMiner
+	inkMiner.settings = server.MinerNetSettings{}
+	inkMiner.settings.GenesisBlockHash = "genesis!"
+	inkMiner.settings.InkPerOpBlock = 5
+	inkMiner.settings.InkPerNoOpBlock = 10
+	inkMiner.settings.PoWDifficultyNoOpBlock = 1
+	inkMiner.settings.PoWDifficultyOpBlock = 2
+
+	return inkMiner, nil
 }

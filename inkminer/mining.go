@@ -1,10 +1,10 @@
 package inkminer
 
 import (
-	"log"
-
 	"../blockartlib"
+	"log"
 	//"crypto/cipher"
+	"../crypto"
 	"fmt"
 )
 
@@ -148,7 +148,7 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 	lastState := State{}
 	foundState := false
 	// Keep walking until we hit a genesis block, or a pre-computed block
-	for err == nil && block.PrevBlock != "" {
+	for err == nil && block.PrevBlock != i.settings.GenesisBlockHash {
 		// Grab the next block on the chain
 		nextHash := block.PrevBlock
 		block, ok := i.mu.blockchain[nextHash]
@@ -174,6 +174,10 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 		} else {
 			// Not found just yet, add this block to the worklist and keep going
 			workListStack = append(workListStack, block)
+			if block.PrevBlock == i.settings.GenesisBlockHash {
+				// We are at the end of the blockchain, don't bother continuing
+				break
+			}
 			continue
 		}
 	}
@@ -187,9 +191,24 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 	}
 
 	// Now, attempt to work through the worklist
-	for pos := len(workListStack) - 1; pos > 0; pos-- {
+	for pos := len(workListStack) - 1; pos >= 0; pos-- {
 		workingBlock := workListStack[pos]
-		createdState := lastState
+		createdState := State{}
+		createdState.shapes = make(map[string]blockartlib.Shape)
+		createdState.shapeOwners = make(map[string]string)
+		createdState.inkLevels = make(map[string]uint32)
+
+		for key, value := range lastState.shapes {
+			createdState.shapes[key] = value
+		}
+
+		for key, value := range lastState.shapeOwners {
+			createdState.shapeOwners[key] = value
+		}
+
+		for key, value := range lastState.inkLevels {
+			createdState.inkLevels[key] = value
+		}
 
 		// For each operation, add each entry
 		for _, op := range workingBlock.Records {
@@ -212,12 +231,16 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 		}
 
 		// Gives reward based on the block
+		rewardPubKey, err := crypto.MarshalPublic(&workingBlock.PubKey)
+		if err != nil {
+			return newState, err
+		}
 		if len(workingBlock.Records) > 0 {
 			// Operation block
-			createdState.inkLevels[workingBlockHash] += i.settings.InkPerOpBlock
+			createdState.inkLevels[rewardPubKey] += i.settings.InkPerOpBlock
 		} else {
 			// NoOp block
-			createdState.inkLevels[workingBlockHash] += i.settings.InkPerNoOpBlock
+			createdState.inkLevels[rewardPubKey] += i.settings.InkPerNoOpBlock
 		}
 
 		// Update the states
@@ -242,8 +265,3 @@ func (i *InkMiner) retrieveState(blockHash string) (retState State, err error) {
 		return retState, nil
 	}
 }
-
-// Starts from the
-//func (i *InkMiner) autoAddStates() bool {
-//
-//}
