@@ -26,13 +26,15 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 		return err
 	}
 
-	if i.i.states[blockHash].inkLevels[req.PubKey] < req.InkCost {
-		return blockartlib.InsufficientInkError(i.i.states[blockHash].inkLevels[req.PubKey])
-	}
-	if err := i.i.floodOperation(*req); err != nil {
+	pubKey, err := req.PubKeyString()
+	if err != nil {
 		return err
 	}
-	if err := i.i.mineBlock(*req); err != nil {
+
+	if i.i.states[blockHash].inkLevels[pubKey] < req.InkCost {
+		return blockartlib.InsufficientInkError(i.i.states[blockHash].inkLevels[pubKey])
+	}
+	if err := i.i.addOperation(*req); err != nil {
 		return err
 	}
 	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
@@ -44,7 +46,7 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	}
 	addShapeResponse := blockartlib.AddShapeResponse{
 		BlockHash:    blockHash,
-		InkRemaining: i.i.states[blockHash].inkLevels[req.PubKey],
+		InkRemaining: i.i.states[blockHash].inkLevels[pubKey],
 	}
 	*resp = addShapeResponse
 	return nil
@@ -75,17 +77,21 @@ func (i *InkMinerRPC) GetInk(req *string, resp *uint32) error {
 }
 
 func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) error {
-	if err := i.i.floodOperation(*req); err != nil {
+	if err := i.i.addOperation(*req); err != nil {
 		return err
 	}
-	if err := i.i.mineBlock(*req); err != nil {
-		return err
-	}
+	// TODO: wait for ValidateNum
 	blockHash, err := i.i.currentHead.Hash()
 	if err != nil {
 		return err
 	}
-	*resp = i.i.states[blockHash].inkLevels[req.PubKey]
+
+	pubKey, err := req.PubKeyString()
+	if err != nil {
+		return err
+	}
+
+	*resp = i.i.states[blockHash].inkLevels[pubKey]
 	return nil
 }
 
@@ -93,7 +99,12 @@ func (i *InkMinerRPC) GetShapes(req *string, resp *blockartlib.GetShapesResponse
 	if block, ok := i.i.GetBlock(*req); ok {
 		getShapesResponse := blockartlib.GetShapesResponse{}
 		for i := 0; i < len(block.Records); i++ {
-			getShapesResponse.ShapeHashes = append(getShapesResponse.ShapeHashes, block.Records[i].ShapeHash)
+			op := block.Records[i]
+			hash, err := op.Hash()
+			if err != nil {
+				return err
+			}
+			getShapesResponse.ShapeHashes = append(getShapesResponse.ShapeHashes, hash)
 		}
 		*resp = getShapesResponse
 		return nil

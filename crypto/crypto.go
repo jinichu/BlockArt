@@ -52,6 +52,9 @@ func MarshalPublic(key *ecdsa.PublicKey) (string, error) {
 // UnmarshalPrivate unmarshals a x509/PEM encoded ECDSA private key.
 func UnmarshalPrivate(key string) (*ecdsa.PrivateKey, error) {
 	block, _ := pem.Decode([]byte(key))
+	if block == nil {
+		return nil, errors.New("no PEM block found in private key")
+	}
 	privKey, err := x509.ParseECPrivateKey(block.Bytes)
 	if err != nil {
 		return nil, err
@@ -62,6 +65,9 @@ func UnmarshalPrivate(key string) (*ecdsa.PrivateKey, error) {
 // UnmarshalPublic unmarshals a x509/PEM encoded ECDSA public key.
 func UnmarshalPublic(key string) (*ecdsa.PublicKey, error) {
 	block, _ := pem.Decode([]byte(key))
+	if block == nil {
+		return nil, errors.New("no PEM block found in public key")
+	}
 	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return nil, err

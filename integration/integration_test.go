@@ -178,3 +178,19 @@ func (ts *TestCluster) Close() {
 		ts.t.Error(err)
 	}
 }
+
+func (ts *TestCluster) NewAddOp(op blockartlib.Operation) blockartlib.Operation {
+	op.PubKey = ts.Keys[0].PublicKey
+	op.OpType = blockartlib.ADD
+	op.ADD.Shape = blockartlib.Shape{
+		Svg:    "M 0 0 H 20 V 20 h -20 Z",
+		Fill:   "transparent",
+		Stroke: "red",
+	}
+
+	op2, err := op.Sign(*ts.Keys[0])
+	if err != nil {
+		ts.t.Fatal(err)
+	}
+	return op2
+}

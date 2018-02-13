@@ -283,6 +283,11 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 		return State{}, fmt.Errorf("expected block to have BlockNum = %d; got %d", createdState.blockNum, block.BlockNum)
 	}
 
+	// increment the committed time by one
+	for k, v := range createdState.commitedOperations {
+		createdState.commitedOperations[k] = v + 1
+	}
+
 	// For each operation, add each entry
 	for _, op := range block.Records {
 		opHash, err := op.Hash()
@@ -293,15 +298,26 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 		if _, ok := createdState.commitedOperations[opHash]; ok {
 			return State{}, fmt.Errorf("operation has already been committed! %+v", opHash)
 		}
-		createdState.commitedOperations[opHash] = struct{}{}
+		createdState.commitedOperations[opHash] = 1
 
-		pubkey := op.PubKey
+		pubkey, err := op.PubKeyString()
+		if err != nil {
+			return State{}, err
+		}
+
+		var opCost uint32
 		// TODO compute InkCost and ShapeHash here
-		opCost := op.InkCost
-		shape := op.Shape
-		shapeHash := op.ShapeHash
-		createdState.shapes[shapeHash] = shape
-		createdState.shapeOwners[shapeHash] = pubkey
+		if op.OpType == blockartlib.ADD {
+			opCost = op.InkCost
+			createdState.shapes[opHash] = op.ADD.Shape
+			createdState.shapeOwners[opHash] = pubkey
+		} else if op.OpType == blockartlib.DELETE {
+			// TODO
+			return State{}, fmt.Errorf("DELETE is unimplemented")
+		} else {
+			return State{}, fmt.Errorf("invalid OpType: %+v", op)
+		}
+
 		if createdState.inkLevels[pubkey] >= opCost {
 			createdState.inkLevels[pubkey] = createdState.inkLevels[pubkey] - opCost
 		} else {

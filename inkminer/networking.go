@@ -248,7 +248,9 @@ func (i *InkMinerRPC) NotifyOperation(req NotifyOperationRequest, resp *NotifyOp
 }
 
 func (i *InkMiner) addOperation(op blockartlib.Operation) error {
-	// TODO: validate operation
+	if err := validateOp(op); err != nil {
+		return err
+	}
 
 	hash, err := op.Hash()
 	if err != nil {

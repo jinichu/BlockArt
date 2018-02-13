@@ -8,8 +8,9 @@ type State struct {
 	shapes      map[string]blockartlib.Shape // Map of shape hashes to their SVG string representation
 	shapeOwners map[string]string            // Map of shape hashes to their owner (InkMiner PubKey)
 	inkLevels   map[string]uint32            // Current ink levels of every InkMiner
-	// commitedOperations is a set of currently committed operations
-	commitedOperations map[string]struct{}
+	// commitedOperations is a set of currently committed operations and how long
+	// they've been committed for. Used for ValidateNum.
+	commitedOperations map[string]int
 }
 
 // NewState creates a new state.
@@ -18,7 +19,7 @@ func NewState() State {
 		shapes:             make(map[string]blockartlib.Shape),
 		shapeOwners:        make(map[string]string),
 		inkLevels:          make(map[string]uint32),
-		commitedOperations: make(map[string]struct{}),
+		commitedOperations: make(map[string]int),
 	}
 }
 

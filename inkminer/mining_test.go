@@ -69,9 +69,10 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	// Newer block
 	operation1 := blockartlib.Operation{
+		OpType:  blockartlib.ADD,
 		InkCost: 5,
 		Id:      10,
-		PubKey:  inkMiner.publicKey,
+		PubKey:  inkMiner.privKey.PublicKey,
 	}
 	block2 := blockartlib.Block{
 		Records:   []blockartlib.Operation{operation1},
@@ -119,8 +120,9 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	// Create a new Block and append
 	// New block contains a record that has 5 cost
 	operation2 := blockartlib.Operation{
+		OpType:  blockartlib.ADD,
 		InkCost: 5,
-		PubKey:  inkMiner.publicKey,
+		PubKey:  inkMiner.privKey.PublicKey,
 	}
 	block3 := blockartlib.Block{
 		PrevBlock: blockHash2,
@@ -142,7 +144,10 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	// Check if the state was computed correctly
 
-	inkMiner.CalculateState(block3)
+	if _, err := inkMiner.CalculateState(block3); err != nil {
+		t.Fatal(err)
+	}
+
 	state3, ok := inkMiner.states[block3Hash]
 	if !ok {
 		t.Fatal("Block State 3 was not stored correctly")

@@ -2,14 +2,11 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"math"
 	"net/rpc"
 	"strconv"
 	"strings"
 	"time"
-
-	crypto "../crypto"
 )
 
 type ArtNode struct {
@@ -29,11 +26,6 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		return "", "", 0, err
 	}
 
-	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
-	if err != nil {
-		return "", "", 0, err
-	}
-
 	shape := Shape{
 		Svg:    shapeSvgString,
 		Fill:   fill,
@@ -47,32 +39,18 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 
 	args := Operation{
 		OpType:      ADD,
-		Shape:       shape,
 		OpSig:       OpSig{},
-		PubKey:      publicKey,
+		PubKey:      a.privKey.PublicKey,
 		InkCost:     inkCost,
 		ValidateNum: validateNum,
 		Id:          time.Now().Unix(),
 	}
+	args.ADD.Shape = shape
 
-	shapeHash, err = crypto.Hash(args)
+	args, err = args.Sign(a.privKey)
 	if err != nil {
 		return "", "", 0, err
 	}
-
-	args.ShapeHash = shapeHash
-
-	bytes, err := json.Marshal(args)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	r, s, err := crypto.Sign(bytes, a.privKey)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	args.OpSig = OpSig{r, s}
 
 	var resp AddShapeResponse
 	err = a.client.Call("InkMinerRPC.AddShape", args, &resp)
@@ -123,31 +101,19 @@ func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
 // - OutOfBoundsError
 // - ShapeOverlapError
 func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining uint32, err error) {
-	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
-	if err != nil {
-		return 0, err
-	}
-
 	args := Operation{
 		OpType:      DELETE,
 		OpSig:       OpSig{},
-		PubKey:      publicKey,
-		ShapeHash:   shapeHash,
+		PubKey:      a.privKey.PublicKey,
 		ValidateNum: validateNum,
 		Id:          time.Now().Unix(),
 	}
+	args.DELETE.ShapeHash = shapeHash
 
-	bytes, err := json.Marshal(args)
+	args, err = args.Sign(a.privKey)
 	if err != nil {
 		return 0, err
 	}
-
-	r, s, err := crypto.Sign(bytes, a.privKey)
-	if err != nil {
-		return 0, err
-	}
-
-	args.OpSig = OpSig{r, s}
 
 	var resp uint32
 
@@ -156,8 +122,7 @@ func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining
 		return 0, err
 	}
 
-	inkRemaining = resp
-	return
+	return resp, nil
 }
 
 // Retrieves hashes contained by a specific block.

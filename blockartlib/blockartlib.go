@@ -20,7 +20,8 @@ import (
 type OpType int
 
 const (
-	ADD OpType = iota
+	UNKNOWN OpType = iota
+	ADD
 	DELETE
 )
 

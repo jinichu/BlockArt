@@ -61,12 +61,15 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		return InkMinerRPC{}, err
 	}
 	op := blockartlib.Operation{
-		Shape: shape,
+		OpType: blockartlib.ADD,
 	}
+	op.ADD.Shape = shape
+
 	op2 := blockartlib.Operation{
-		Shape: blockartlib.Shape{
-			Svg: "qwerasdf",
-		},
+		OpType: blockartlib.ADD,
+	}
+	op2.ADD.Shape = blockartlib.Shape{
+		Svg: "qwerasdf",
 	}
 	block3.Records = append(block3.Records, op)
 	block3.Records = append(block3.Records, op2)
