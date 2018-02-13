@@ -107,7 +107,7 @@ outer:
 
 // Given a particular blockHash, generate a new state by walking through the blockchain
 // Automatically adds states if they do not exist already
-// TODO: Complete this
+// INVARIANT: The blockchain has all blocks from 1..n precomputed
 func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) {
 	newState = State{}
 	newState.shapes = make(map[string]blockartlib.Shape)

@@ -186,6 +186,7 @@ func generateTestInkMiner() (*InkMiner, error) {
 		inkMiner.settings.InkPerNoOpBlock = 10
 		inkMiner.settings.PoWDifficultyNoOpBlock = 1
 		inkMiner.settings.PoWDifficultyOpBlock = 2
+
 		return inkMiner, nil
 	} else {
 		inkMiner, err := New(privKey)
