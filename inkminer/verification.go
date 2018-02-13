@@ -38,11 +38,10 @@ func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) bool {
 	return false
 }
 
-// Returns true if the inkCost in valid in the state
-// TODO: Complete this
+// Returns true if the inkCost is valid in the given state
 // !!!
-func (i *InkMiner) isInkCostValid(inkCost int, pubKey string) bool {
-	return false // stub
+func (i *InkMiner) isInkCostValid(inkCost int, pubKey string, state State) bool {
+	return state.inkLevels[pubKey] > uint32(inkCost)
 }
 
 // Returns true if the given shape is valid to add in the state (does not conflict with something else)
