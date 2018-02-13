@@ -16,7 +16,7 @@ type Operation struct {
 	PubKey      string // Public key of the ArtNode that created this operation
 	InkCost     uint32 // Cost of ink to do this operation
 	ValidateNum uint8  //  Number of blocks that must follow the block with this operation in the blockchain
-	Id          string // Unique ID for this Operation (to prevent replay attacks), given by a timestamp
+	Id          int64  // Unique ID for this Operation (to prevent replay attacks), given by a timestamp
 }
 
 type OpSig struct {

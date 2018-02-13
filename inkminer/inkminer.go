@@ -47,12 +47,6 @@ type InkMiner struct {
 	}
 }
 
-type State struct {
-	shapes      map[string]blockartlib.Shape // Map of shape hashes to their SVG string representation
-	shapeOwners map[string]string            // Map of shape hashes to their owner (InkMiner PubKey)
-	inkLevels   map[string]uint32            // Current ink levels of every InkMiner
-}
-
 // getOutboundIP sets up a UDP connection (but doesn't send anything) and uses
 // the local IP addressed assigned.
 func getOutboundIP() string {

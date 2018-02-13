@@ -1,9 +1,6 @@
 package inkminer
 
 import (
-	"fmt"
-	"math/rand"
-	"strconv"
 	"testing"
 
 	"../blockartlib"
@@ -55,38 +52,37 @@ func TestMineWorker(t *testing.T) {
 }
 
 func TestInkMiner_CalculateState(t *testing.T) {
-	inkMiner, err := generateTestInkMiner()
-	if err != nil {
-		t.Fatal("Unable to create inkMiner due to: ", err)
-	}
+	inkMiner := generateTestInkMiner(t)
 
 	// Generate Block 1
-	block1 := blockartlib.Block{}
-	block1.BlockNum = 1
-	block1.PrevBlock = inkMiner.settings.GenesisBlockHash
-	pubKeyValue, err := crypto.UnmarshalPublic(inkMiner.publicKey)
-	if err != nil {
-		t.Fatal("Error unmarshalling public key")
+	block1 := blockartlib.Block{
+		BlockNum:  1,
+		PrevBlock: inkMiner.settings.GenesisBlockHash,
+		PubKey:    inkMiner.privKey.PublicKey,
+		Nonce:     4,
 	}
-	block1.PubKey = *pubKeyValue
-
-	// Determine a random nonce for the newBlock
-	block1.Nonce = 4
 	blockHash1, err := block1.Hash()
 	if err != nil {
-		t.Fatal("Unable to retrieve the hash of the first TestBlock")
+		t.Fatal(err)
 	}
 	inkMiner.AddBlock(block1)
 
 	// Newer block
-	block2 := blockartlib.Block{}
-	block2.PrevBlock = blockHash1
-	block2.BlockNum = 2
-	block2.PubKey = *pubKeyValue
-	block2.Nonce = 15
+	operation1 := blockartlib.Operation{
+		InkCost: 5,
+		Id:      10,
+		PubKey:  inkMiner.publicKey,
+	}
+	block2 := blockartlib.Block{
+		Records:   []blockartlib.Operation{operation1},
+		PrevBlock: blockHash1,
+		BlockNum:  2,
+		PubKey:    inkMiner.privKey.PublicKey,
+		Nonce:     15,
+	}
 	blockHash2, err := block2.Hash()
 	if err != nil {
-		t.Fatal("Unable to retrieve the hash of the first TestBlock")
+		t.Fatal(err)
 	}
 
 	inkMiner.AddBlock(block2)
@@ -98,14 +94,15 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	}
 
 	// Check if the inkLevels are updated
-	if someState.inkLevels[inkMiner.publicKey] != inkMiner.settings.InkPerNoOpBlock*2 {
-		t.Fatal("ERROR: Incorrect inkLevels. Got: ", someState.inkLevels[inkMiner.publicKey],
-			" Expected: ", inkMiner.settings.InkPerNoOpBlock*2)
+	want := inkMiner.settings.InkPerNoOpBlock*1 + inkMiner.settings.InkPerOpBlock*1 - operation1.InkCost
+	out := someState.inkLevels[inkMiner.publicKey]
+	if out != want {
+		t.Fatal("ERROR: Incorrect inkLevels. Got: ", out, " Expected: ", want)
 	}
 
 	// Check if the inkMiner contains the block
 	if _, ok := inkMiner.states[blockHash2]; !ok {
-		t.Log("ERROR: InkMIner has not saved the state to it's map")
+		t.Log("ERROR: InkMiner has not saved the state to it's map")
 	}
 
 	// Check if the first block was computed properly
@@ -121,15 +118,17 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	// Create a new Block and append
 	// New block contains a record that has 5 cost
-	block3 := blockartlib.Block{}
-	block3.PrevBlock = blockHash2
-	block3.BlockNum = 3
-	operation := blockartlib.Operation{}
-	operation.InkCost = 5
-	operation.PubKey = inkMiner.publicKey
-	block3.Records = []blockartlib.Operation{operation}
-	block3.PubKey = *pubKeyValue
-	block3.Nonce = 22441
+	operation2 := blockartlib.Operation{
+		InkCost: 5,
+		PubKey:  inkMiner.publicKey,
+	}
+	block3 := blockartlib.Block{
+		PrevBlock: blockHash2,
+		BlockNum:  3,
+		Records:   []blockartlib.Operation{operation2},
+		PubKey:    inkMiner.privKey.PublicKey,
+		Nonce:     22441,
+	}
 
 	block3Hash, err := block3.Hash()
 	if err != nil {
@@ -149,59 +148,35 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		t.Fatal("Block State 3 was not stored correctly")
 	}
 
-	expectedInkLevels := inkMiner.settings.InkPerNoOpBlock*2 + inkMiner.settings.InkPerOpBlock - 5
-
-	if state3.inkLevels[inkMiner.publicKey] != expectedInkLevels {
-		t.Fatal("ERROR: Incorrect inkLevels. Got: ", state3.inkLevels[inkMiner.publicKey],
-			" Expected: ", expectedInkLevels)
+	{
+		got := state3.inkLevels[inkMiner.publicKey]
+		want := inkMiner.settings.InkPerNoOpBlock*1 + inkMiner.settings.InkPerOpBlock*2 - operation1.InkCost - operation2.InkCost
+		if got != want {
+			t.Fatal("ERROR: Incorrect inkLevels. Got: ", got, " Expected: ", want)
+		}
 	}
 }
 
-func generateTestInkMiner() (*InkMiner, error) {
-	rNum := rand.Int()%5 + 1
-	var basePath string = "../testkeys/test" + strconv.FormatInt(int64(rNum), 10)
-
-	// Attempt to load the privatekey from file
-	privKey, err := crypto.LoadPrivate(basePath+"-public.key", basePath+"-private.key")
+func generateTestInkMiner(t *testing.T) *InkMiner {
+	privKey, err := crypto.GenerateKey()
 	if err != nil {
-		// If we fail the first time, try again with local path
-		err = nil
-		var basePath string = "./testkeys/test" + strconv.FormatInt(int64(rNum), 10)
-
-		privKey, err := crypto.LoadPrivate(basePath+"-public.key", basePath+"-private.key")
-		if err != nil {
-			fmt.Println(err)
-			return nil, err
-		}
-
-		inkMiner, err := New(privKey)
-		if err != nil {
-			fmt.Println(err)
-			return nil, err
-		}
-
-		inkMiner.settings = server.MinerNetSettings{}
-		inkMiner.settings.GenesisBlockHash = "genesis!"
-		inkMiner.settings.InkPerOpBlock = 5
-		inkMiner.settings.InkPerNoOpBlock = 10
-		inkMiner.settings.PoWDifficultyNoOpBlock = 1
-		inkMiner.settings.PoWDifficultyOpBlock = 2
-
-		return inkMiner, nil
-	} else {
-		inkMiner, err := New(privKey)
-		if err != nil {
-			fmt.Println(err)
-			return nil, err
-		}
-
-		inkMiner.settings = server.MinerNetSettings{}
-		inkMiner.settings.GenesisBlockHash = "genesis!"
-		inkMiner.settings.InkPerOpBlock = 5
-		inkMiner.settings.InkPerNoOpBlock = 10
-		inkMiner.settings.PoWDifficultyNoOpBlock = 1
-		inkMiner.settings.PoWDifficultyOpBlock = 2
-
-		return inkMiner, nil
+		t.Fatal(err)
 	}
+
+	inkMiner, err := New(privKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inkMiner.settings = server.MinerNetSettings{
+		MinerSettings: server.MinerSettings{
+			GenesisBlockHash:       "genesis!",
+			InkPerOpBlock:          20,
+			InkPerNoOpBlock:        5,
+			PoWDifficultyNoOpBlock: 1,
+			PoWDifficultyOpBlock:   2,
+		},
+	}
+
+	return inkMiner
 }

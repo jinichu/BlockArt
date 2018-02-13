@@ -177,41 +177,11 @@ outer:
 	}
 }
 
-// NewState creates a new state.
-func NewState() State {
-	return State{
-		shapes:      make(map[string]blockartlib.Shape),
-		shapeOwners: make(map[string]string),
-		inkLevels:   make(map[string]uint32),
-	}
-}
-
-// Copy returns a copy of the given state.
-func (s State) Copy() State {
-	s2 := NewState()
-
-	for key, value := range s.shapes {
-		s2.shapes[key] = value
-	}
-
-	for key, value := range s.shapeOwners {
-		s2.shapeOwners[key] = value
-	}
-
-	for key, value := range s.inkLevels {
-		s2.inkLevels[key] = value
-	}
-
-	return s2
-}
-
 // Given a particular blockHash, generate a new state by walking through the blockchain
 // Automatically adds states if they do not exist already
 // INVARIANT: The blockchain has all blocks from 1..n precomputed
 func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err error) {
 	newState = NewState()
-
-	err = nil
 
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -224,15 +194,6 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 	if block.PrevBlock == "" {
 		// Invalid block, is it a genesis block
 		return State{}, errors.New("invalid block: missing PrevBlock")
-	}
-	if block.PrevBlock == "" {
-		// Invalid block, is it a genesis block
-		return newState, nil
-	}
-
-	if block.PrevBlock == i.settings.GenesisBlockHash {
-		// Block is a genesis block; the state is blank
-		return newState, nil
 	}
 
 	// If the state was already previously calculated, simply return it
@@ -289,44 +250,17 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 	// Now, attempt to work through the worklist
 	for pos := len(workListStack) - 1; pos >= 0; pos-- {
 		workingBlock := workListStack[pos]
-		createdState := lastState.Copy()
-
-		// For each operation, add each entry
-		for _, op := range workingBlock.Records {
-			pubkey := op.PubKey
-			opCost := op.InkCost
-			shape := op.Shape
-			shapeHash := op.ShapeHash
-			createdState.shapes[shapeHash] = shape
-			createdState.shapeOwners[shapeHash] = pubkey
-			if createdState.inkLevels[pubkey] > opCost {
-				createdState.inkLevels[pubkey] = createdState.inkLevels[pubkey] - opCost
-			} else {
-				fmt.Println("Ink levels somehow became lower than 0...")
-				createdState.inkLevels[pubkey] = 0
-				return State{}, fmt.Errorf("%s: ink levels below 0!", pubkey)
-			}
+		createdState, err := i.TransformState(lastState, workingBlock)
+		if err != nil {
+			return State{}, err
 		}
+
+		// Update the states
 		workingBlockHash, err := workingBlock.Hash()
 		if err != nil {
 			fmt.Println("Error hashing block")
 			return State{}, err
 		}
-
-		// Gives reward based on the block
-		rewardPubKey, err := crypto.MarshalPublic(&workingBlock.PubKey)
-		if err != nil {
-			return newState, err
-		}
-		if len(workingBlock.Records) > 0 {
-			// Operation block
-			createdState.inkLevels[rewardPubKey] += i.settings.InkPerOpBlock
-		} else {
-			// NoOp block
-			createdState.inkLevels[rewardPubKey] += i.settings.InkPerNoOpBlock
-		}
-
-		// Update the states
 		i.states[workingBlockHash] = createdState
 		// Set the state walker with the newest state
 		lastState = createdState
@@ -339,6 +273,58 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 	}
 
 	return newState, err
+}
+
+func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, error) {
+	createdState := prev.Copy()
+
+	createdState.blockNum += 1
+	if createdState.blockNum != block.BlockNum {
+		return State{}, fmt.Errorf("expected block to have BlockNum = %d; got %d", createdState.blockNum, block.BlockNum)
+	}
+
+	// For each operation, add each entry
+	for _, op := range block.Records {
+		opHash, err := op.Hash()
+		if err != nil {
+			return State{}, err
+		}
+
+		if _, ok := createdState.commitedOperations[opHash]; ok {
+			return State{}, fmt.Errorf("operation has already been committed! %+v", opHash)
+		}
+		createdState.commitedOperations[opHash] = struct{}{}
+
+		pubkey := op.PubKey
+		// TODO compute InkCost and ShapeHash here
+		opCost := op.InkCost
+		shape := op.Shape
+		shapeHash := op.ShapeHash
+		createdState.shapes[shapeHash] = shape
+		createdState.shapeOwners[shapeHash] = pubkey
+		if createdState.inkLevels[pubkey] >= opCost {
+			createdState.inkLevels[pubkey] = createdState.inkLevels[pubkey] - opCost
+		} else {
+			fmt.Println("Ink levels somehow became lower than 0...")
+			createdState.inkLevels[pubkey] = 0
+			return State{}, fmt.Errorf("%s: ink levels below 0!", pubkey)
+		}
+	}
+
+	// Gives reward based on the block
+	rewardPubKey, err := crypto.MarshalPublic(&block.PubKey)
+	if err != nil {
+		return State{}, err
+	}
+	if len(block.Records) > 0 {
+		// Operation block
+		createdState.inkLevels[rewardPubKey] += i.settings.InkPerOpBlock
+	} else {
+		// NoOp block
+		createdState.inkLevels[rewardPubKey] += i.settings.InkPerNoOpBlock
+	}
+
+	return createdState, nil
 }
 
 func (i *InkMiner) retrieveState(blockHash string) (retState State, err error) {
