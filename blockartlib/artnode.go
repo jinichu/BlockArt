@@ -13,8 +13,9 @@ import (
 )
 
 type ArtNode struct {
-	client  *rpc.Client      // RPC client to connect to the InkMiner
-	privKey ecdsa.PrivateKey // Pub/priv key pair of this ArtNode
+	client    *rpc.Client      // RPC client to connect to the InkMiner
+	privKey   ecdsa.PrivateKey // Pub/priv key pair of this ArtNode
+	minerAddr string
 }
 
 // Adds a new shape to the canvas.
@@ -74,6 +75,14 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		return "", "", 0, err
 	}
 
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return "", "", 0, DisconnectedError(a.minerAddr)
+	}
+
 	args.OpSig = OpSig{r, s}
 
 	var resp AddShapeResponse
@@ -92,6 +101,14 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 // - DisconnectedError
 // - InvalidShapeHashError
 func (a *ArtNode) GetSvgString(shapeHash string) (svgString string, err error) {
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return "", DisconnectedError(a.minerAddr)
+	}
+
 	var resp string
 
 	err = a.client.Call("InkMinerRPC.GetSvgString", shapeHash, &resp)
@@ -107,6 +124,14 @@ func (a *ArtNode) GetSvgString(shapeHash string) (svgString string, err error) {
 // Can return the following errors:
 // - DisconnectedError
 func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return 0, DisconnectedError(a.minerAddr)
+	}
+
 	var resp uint32
 
 	err = a.client.Call("InkMinerRPC.GetInk", "", &resp)
@@ -151,6 +176,14 @@ func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining
 		return 0, err
 	}
 
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return 0, DisconnectedError(a.minerAddr)
+	}
+
 	args.OpSig = OpSig{r, s}
 
 	var resp uint32
@@ -169,6 +202,14 @@ func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining
 // - DisconnectedError
 // - InvalidBlockHashError
 func (a *ArtNode) GetShapes(blockHash string) (shapeHashes []string, err error) {
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return nil, DisconnectedError(a.minerAddr)
+	}
+
 	var resp GetShapesResponse
 
 	err = a.client.Call("InkMinerRPC.GetShapes", blockHash, &resp)
@@ -184,6 +225,14 @@ func (a *ArtNode) GetShapes(blockHash string) (shapeHashes []string, err error) 
 // Can return the following errors:
 // - DisconnectedError
 func (a *ArtNode) GetGenesisBlock() (blockHash string, err error) {
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return "", DisconnectedError(a.minerAddr)
+	}
+
 	var resp string
 
 	err = a.client.Call("InkMinerRPC.GetGenesisBlock", "", &resp)
@@ -200,6 +249,14 @@ func (a *ArtNode) GetGenesisBlock() (blockHash string, err error) {
 // - DisconnectedError
 // - InvalidBlockHashError
 func (a *ArtNode) GetChildren(blockHash string) (blockHashes []string, err error) {
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return nil, DisconnectedError(a.minerAddr)
+	}
+
 	var resp GetChildrenResponse
 
 	err = a.client.Call("InkMinerRPC.GetChildrenBlocks", blockHash, &resp)
@@ -214,6 +271,14 @@ func (a *ArtNode) GetChildren(blockHash string) (blockHashes []string, err error
 // Closes the canvas/connection to the BlockArt network.
 // - DisconnectedError
 func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
+	// Simple RPC call to check if we can reach the InkMiner
+	var req string
+	var success bool
+	err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+	if err != nil {
+		return 0, DisconnectedError(a.minerAddr)
+	}
+
 	var resp uint32
 
 	err = a.client.Call("InkMinerRPC.GetInk", "", &resp)

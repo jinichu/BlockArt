@@ -11,6 +11,11 @@ type InkMinerRPC struct {
 	i *InkMiner
 }
 
+func (i *InkMinerRPC) TestConnection(req *string, resp *bool) error {
+	*resp = true
+	return nil
+}
+
 func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp *server.CanvasSettings) error {
 	// Confirm that this is the right public key for this InkMiner
 	if req.PublicKey != i.i.publicKey {
