@@ -213,8 +213,9 @@ func OpenCanvas(minerAddr string, privKey ecdsa.PrivateKey) (canvas Canvas, sett
 		return nil, CanvasSettings{}, DisconnectedError(minerAddr)
 	}
 	artNode := &ArtNode{
-		client:  client,
-		privKey: privKey,
+		client:    client,
+		privKey:   privKey,
+		minerAddr: minerAddr,
 	}
 
 	publicKey, err := crypto.MarshalPublic(&privKey.PublicKey)
