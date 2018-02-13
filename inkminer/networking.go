@@ -244,26 +244,30 @@ func (i *InkMiner) floodOperation(operation blockartlib.Operation) error {
 }
 
 func (i *InkMinerRPC) NotifyOperation(req NotifyOperationRequest, resp *NotifyOperationResponse) error {
+	return i.i.addOperation(req.Operation)
+}
+
+func (i *InkMiner) addOperation(op blockartlib.Operation) error {
 	// TODO: validate operation
 
-	hash, err := req.Operation.Hash()
+	hash, err := op.Hash()
 	if err != nil {
 		return err
 	}
 
-	i.i.mu.Lock()
-	_, ok := i.i.mu.mempool[hash]
+	i.mu.Lock()
+	_, ok := i.mu.mempool[hash]
 	if !ok {
-		i.i.mu.mempool[hash] = req.Operation
+		i.mu.mempool[hash] = op
 	}
-	i.i.mu.Unlock()
+	i.mu.Unlock()
 
 	if ok {
 		return nil
 	}
 
 	// if it's a new operation, announce it to all peers
-	return i.i.floodOperation(req.Operation)
+	return i.floodOperation(op)
 }
 
 type NotifyBlockRequest struct {
@@ -352,7 +356,7 @@ func (i *InkMiner) peerHeartBeat(p *peer) {
 }
 
 // Helper Function: Adds block to the InkMiner
-func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error){
+func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 

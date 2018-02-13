@@ -34,9 +34,8 @@ type InkMiner struct {
 	mu struct {
 		sync.Mutex
 
-		l               net.Listener
-		currentWIPBlock blockartlib.Block
-		peers           map[string]*peer
+		l     net.Listener
+		peers map[string]*peer
 
 		// blockchain is a map between blockhash and the block
 		blockchain map[string]blockartlib.Block
@@ -46,12 +45,6 @@ type InkMiner struct {
 		// closed is whether the miner is closed, mostly used for tests
 		closed bool
 	}
-}
-
-type State struct {
-	shapes      map[string]blockartlib.Shape // Map of shape hashes to their SVG string representation
-	shapeOwners map[string]string            // Map of shape hashes to their owner (InkMiner PubKey)
-	inkLevels   map[string]uint32            // Current ink levels of every InkMiner
 }
 
 // getOutboundIP sets up a UDP connection (but doesn't send anything) and uses

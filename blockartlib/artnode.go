@@ -46,8 +46,6 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		return "", "", 0, err
 	}
 
-	id := time.Now().String()
-
 	args := Operation{
 		OpType:      ADD,
 		Shape:       shape,
@@ -55,7 +53,7 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		PubKey:      publicKey,
 		InkCost:     inkCost,
 		ValidateNum: validateNum,
-		Id:          id,
+		Id:          time.Now().Unix(),
 	}
 
 	shapeHash, err = crypto.Hash(args)
@@ -155,15 +153,13 @@ func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining
 		return 0, err
 	}
 
-	id := time.Now().String()
-
 	args := Operation{
 		OpType:      DELETE,
 		OpSig:       OpSig{},
 		PubKey:      publicKey,
 		ShapeHash:   shapeHash,
 		ValidateNum: validateNum,
-		Id:          id,
+		Id:          time.Now().Unix(),
 	}
 
 	bytes, err := json.Marshal(args)
