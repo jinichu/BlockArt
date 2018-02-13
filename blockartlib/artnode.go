@@ -3,11 +3,11 @@ package blockartlib
 import (
 	"crypto/ecdsa"
 	"encoding/json"
-	"net/rpc"
-	"time"
-	"strings"
-	"strconv"
 	"math"
+	"net/rpc"
+	"strconv"
+	"strings"
+	"time"
 
 	crypto "../crypto"
 )
@@ -45,16 +45,6 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		return "", "", 0, err
 	}
 
-	shapeHash, err = crypto.Hash(shapeSvgString)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	shapeHash, err = crypto.Hash(shape)
-	if err != nil {
-		return "", "", 0, err
-	}
-
 	id := time.Now().String()
 
 	args := Operation{
@@ -63,10 +53,16 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		OpSig:       OpSig{},
 		PubKey:      publicKey,
 		InkCost:     inkCost,
-		ShapeHash:   shapeHash,
 		ValidateNum: validateNum,
 		Id:          id,
 	}
+
+	shapeHash, err = crypto.Hash(args)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	args.ShapeHash = shapeHash
 
 	bytes, err := json.Marshal(args)
 	if err != nil {
@@ -255,11 +251,11 @@ func isClosed(shapeSvgString string) bool {
 
 	res := false
 
-	if arr[len(arr) - 1] == "Z" || arr[len(arr) - 1] == "Z" {
+	if arr[len(arr)-1] == "Z" || arr[len(arr)-1] == "Z" {
 		res = true
-	} else if arr[len(arr) - 3] == "L" && arr[len(arr) - 2] == arr[1] && arr[len(arr) - 1] == arr[2] {
+	} else if arr[len(arr)-3] == "L" && arr[len(arr)-2] == arr[1] && arr[len(arr)-1] == arr[2] {
 		res = true
-	} else if arr[len(arr) - 3] == "l" {
+	} else if arr[len(arr)-3] == "l" {
 		//TODO
 		print(res)
 	}
@@ -287,54 +283,54 @@ func calculateFillCost(shapeSvgString string) (cost float64) {
 	var y float64
 
 	for {
-		if (i >= len(arr)) {
+		if i >= len(arr) {
 			break
 		}
 		operation = arr[i]
 
 		if operation == "M" || operation == "m" || operation == "L" || operation == "l" {
-			x = parseFloat(arr[i + 1])
-			y = parseFloat(arr[i + 2])
-		} else if operation == "V" || operation == "v"  {
-			y = parseFloat(arr[i + 1])
+			x = parseFloat(arr[i+1])
+			y = parseFloat(arr[i+2])
+		} else if operation == "V" || operation == "v" {
+			y = parseFloat(arr[i+1])
 		} else if operation == "H" || operation == "h" {
-			x = parseFloat(arr[i + 1])
+			x = parseFloat(arr[i+1])
 		}
 
 		new_pos = []float64{}
 
 		switch operation {
-			case "M":
-				new_pos = []float64{x, y}
-				if original_pos == nil {
-					original_pos = new_pos
-				}
-				i += 3
-			case "m":
-				new_pos = []float64{x + current_pos[0], y + current_pos[1]}
-				i += 3
-			case "L":
-				new_pos = []float64{x, y}
-				i += 3
-			case "l":
-				new_pos = []float64{x + current_pos[0], y + current_pos[1]}
-				i += 3
-			case "H":
-				new_pos = []float64{x, current_pos[1]}
-				i += 2
-			case "h":
-				new_pos = []float64{x + current_pos[0], current_pos[1]}
-				i += 2
-			case "V":
-				new_pos = []float64{current_pos[0], y}
-				i += 2
-			case "v":
-				new_pos = []float64{current_pos[0], y + current_pos[1]}
-				i += 2
-			case "Z", "z":
-				new_pos = original_pos
-				i += 1
-			default:
+		case "M":
+			new_pos = []float64{x, y}
+			if original_pos == nil {
+				original_pos = new_pos
+			}
+			i += 3
+		case "m":
+			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+			i += 3
+		case "L":
+			new_pos = []float64{x, y}
+			i += 3
+		case "l":
+			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+			i += 3
+		case "H":
+			new_pos = []float64{x, current_pos[1]}
+			i += 2
+		case "h":
+			new_pos = []float64{x + current_pos[0], current_pos[1]}
+			i += 2
+		case "V":
+			new_pos = []float64{current_pos[0], y}
+			i += 2
+		case "v":
+			new_pos = []float64{current_pos[0], y + current_pos[1]}
+			i += 2
+		case "Z", "z":
+			new_pos = original_pos
+			i += 1
+		default:
 		}
 		current_pos = new_pos
 		vertices = append(vertices, new_pos)
@@ -357,60 +353,60 @@ func calculateLineCost(shapeSvgString string) (cost float64) {
 	var y float64
 
 	for {
-		if (i >= len(arr)) {
+		if i >= len(arr) {
 			return cost
 		}
 
 		operation = arr[i]
 
 		if operation == "M" || operation == "m" || operation == "L" || operation == "l" {
-			x = parseFloat(arr[i + 1])
-			y = parseFloat(arr[i + 2])
-		} else if operation == "V" || operation == "v"  {
-			y = parseFloat(arr[i + 1])
+			x = parseFloat(arr[i+1])
+			y = parseFloat(arr[i+2])
+		} else if operation == "V" || operation == "v" {
+			y = parseFloat(arr[i+1])
 		} else if operation == "H" || operation == "h" {
-			x = parseFloat(arr[i + 1])
+			x = parseFloat(arr[i+1])
 		}
 
 		switch operation {
-			case "M":
-				new_pos = []float64{x, y}
-				if original_pos == nil {
-					original_pos = new_pos
-				}
-				i += 3
-			case "m":
-				new_pos = []float64{x + current_pos[0], y + current_pos[1]}
-				i += 3
-			case "L":
-				new_pos = []float64{x, y}
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 3
-			case "l":
-				new_pos = []float64{x + current_pos[0], y + current_pos[1]}
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 3
-			case "H":
-				new_pos = []float64{x, current_pos[1]}
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 2
-			case "h":
-				new_pos = []float64{x + current_pos[0], current_pos[1]}
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 2
-			case "V":
-				new_pos = []float64{current_pos[0], y}
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 2
-			case "v":
-				new_pos = []float64{current_pos[0], y + current_pos[1]}
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 2
-			case "Z", "z":
-				new_pos = original_pos
-				cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
-				i += 1
-			default:
+		case "M":
+			new_pos = []float64{x, y}
+			if original_pos == nil {
+				original_pos = new_pos
+			}
+			i += 3
+		case "m":
+			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+			i += 3
+		case "L":
+			new_pos = []float64{x, y}
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 3
+		case "l":
+			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 3
+		case "H":
+			new_pos = []float64{x, current_pos[1]}
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 2
+		case "h":
+			new_pos = []float64{x + current_pos[0], current_pos[1]}
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 2
+		case "V":
+			new_pos = []float64{current_pos[0], y}
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 2
+		case "v":
+			new_pos = []float64{current_pos[0], y + current_pos[1]}
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 2
+		case "Z", "z":
+			new_pos = original_pos
+			cost += calculateDistance(current_pos[0], new_pos[0], current_pos[1], new_pos[1])
+			i += 1
+		default:
 		}
 		current_pos = new_pos
 	}
@@ -419,13 +415,13 @@ func calculateLineCost(shapeSvgString string) (cost float64) {
 
 // Calculate the diwtance between two points
 func calculateDistance(x0 float64, x1 float64, y0 float64, y1 float64) (distance float64) {
-	return math.Sqrt(math.Pow((x1 - x0), 2) + math.Pow((y1 - y0), 2))
+	return math.Sqrt(math.Pow((x1-x0), 2) + math.Pow((y1-y0), 2))
 }
 
 // Parse a string number to a float
 func parseFloat(s string) (f float64) {
 	f, _ = strconv.ParseFloat(s, 64)
-	return 
+	return
 }
 
 // Checks if valid svg string
@@ -458,44 +454,44 @@ func isValidPath(svgString string) bool {
 	}
 
 	for {
-		if (i >= len(arr)) {
+		if i >= len(arr) {
 			return true
 		}
 		operation = arr[i]
 
 		switch operation {
-			case "M", "m", "L", "l":
-				if i + 1 >= len(arr) || i + 2 >= len(arr) {
-					return false
-				}
-
-				if !isNumeric(arr[i + 1]) || !isNumeric(arr[i + 2]) {
-					return false
-				}
-
-				i += 3
-			case "H", "h", "V", "v":
-				if i + 1 >= len(arr) {
-					return false
-				}
-
-				if !isNumeric(arr[i + 1]) {
-					return false
-				}
-
-				i += 2
-			case "Z", "z":
-				if i + 1 >= len(arr) {
-					return true
-				}
-
-				if isNumeric(arr[i + 1]) {
-					return false
-				}
-
-				i += 1
-			default:
+		case "M", "m", "L", "l":
+			if i+1 >= len(arr) || i+2 >= len(arr) {
 				return false
+			}
+
+			if !isNumeric(arr[i+1]) || !isNumeric(arr[i+2]) {
+				return false
+			}
+
+			i += 3
+		case "H", "h", "V", "v":
+			if i+1 >= len(arr) {
+				return false
+			}
+
+			if !isNumeric(arr[i+1]) {
+				return false
+			}
+
+			i += 2
+		case "Z", "z":
+			if i+1 >= len(arr) {
+				return true
+			}
+
+			if isNumeric(arr[i+1]) {
+				return false
+			}
+
+			i += 1
+		default:
+			return false
 		}
 	}
 }
@@ -510,13 +506,11 @@ func calculateArea(vertices [][]float64) (area float64) {
 	n := len(vertices)
 	area = 0.0
 
-
-	for i, _ := range(vertices) {
-		j := (i + 1 ) % n
+	for i, _ := range vertices {
+		j := (i + 1) % n
 		area += vertices[i][0] * vertices[j][1]
 		area -= vertices[j][0] * vertices[i][1]
 	}
 
 	return math.Abs(area) / 2
 }
-

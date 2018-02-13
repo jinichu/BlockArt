@@ -11,7 +11,7 @@ import (
 type Operation struct {
 	OpType      OpType // Type of operation
 	Shape       Shape  // Shape object
-	ShapeHash   string // Hash of the SVG string
+	ShapeHash   string // Unique identifier for shape, given by Operation hash
 	OpSig       OpSig  // Signature of the operation, signed by an ArtNode
 	PubKey      string // Public key of the ArtNode that created this operation
 	InkCost     uint32 // Cost of ink to do this operation
