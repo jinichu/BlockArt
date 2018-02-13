@@ -34,9 +34,8 @@ type InkMiner struct {
 	mu struct {
 		sync.Mutex
 
-		l               net.Listener
-		currentWIPBlock blockartlib.Block
-		peers           map[string]*peer
+		l     net.Listener
+		peers map[string]*peer
 
 		// blockchain is a map between blockhash and the block
 		blockchain map[string]blockartlib.Block

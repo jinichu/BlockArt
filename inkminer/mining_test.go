@@ -92,7 +92,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	inkMiner.AddBlock(block2)
 
 	// Calculate two blocks at once and test
-	someState, err := inkMiner.CalculateState(blockHash2)
+	someState, err := inkMiner.CalculateState(block2)
 	if err != nil {
 		t.Fatal("Error encountered when calculating state: ", err)
 	}
@@ -143,7 +143,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	// Check if the state was computed correctly
 
-	inkMiner.CalculateState(block3Hash)
+	inkMiner.CalculateState(block3)
 	state3, ok := inkMiner.states[block3Hash]
 	if !ok {
 		t.Fatal("Block State 3 was not stored correctly")

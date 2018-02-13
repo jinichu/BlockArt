@@ -1,12 +1,73 @@
 package inkminer
 
 import (
-	"../blockartlib"
-	"log"
-	//"crypto/cipher"
-	"../crypto"
+	"errors"
 	"fmt"
+	"log"
+
+	"../blockartlib"
+	"../crypto"
 )
+
+// BlockDepth returns the block depth for the given hash. It also memoizes the
+// depths into the provided map for performance with repeated calls.
+func (i *InkMiner) BlockDepth(hash string, depths map[string]int) (int, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	return i.blockDepthLocked(hash, depths)
+}
+
+// blockDepthLocked returns the block depth. It must be locked before calling!
+// See BlockDepth.
+func (i *InkMiner) blockDepthLocked(hash string, depths map[string]int) (int, error) {
+	if hash == i.settings.GenesisBlockHash {
+		return 0, nil
+	}
+
+	if depths != nil {
+		if depth, ok := depths[hash]; ok {
+			return depth, nil
+		}
+	}
+
+	prev, ok := i.mu.blockchain[hash]
+	if !ok {
+		return 0, blockartlib.InvalidBlockHashError(hash)
+	}
+	depth, err := i.blockDepthLocked(prev.PrevBlock, depths)
+	if err != nil {
+		return 0, err
+	}
+	depth += 1
+
+	if depths != nil {
+		depths[hash] = depth
+	}
+
+	return depth, nil
+}
+
+func (i *InkMiner) BlockWithLongestChain() (string, int, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	depths := map[string]int{}
+	max := i.settings.GenesisBlockHash
+	maxDepth := 0
+	for hash := range i.mu.blockchain {
+		depth, err := i.blockDepthLocked(hash, depths)
+		if err != nil {
+			return "", 0, err
+		}
+		if depth > maxDepth {
+			max = hash
+			maxDepth = depth
+		}
+	}
+
+	return max, 0, nil
+}
 
 func (i *InkMiner) GetBlock(hash string) (blockartlib.Block, bool) {
 	i.mu.Lock()
@@ -22,12 +83,23 @@ func (i *InkMiner) mineBlock(operation blockartlib.Operation) error {
 
 	// This maybe should be structured as "daemon" ie. an infinite for loop with
 	// channels in/out so it's possible to interrupt mid block. - Tristan
+	return errors.New("unimplemented")
+}
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+func (i *InkMiner) generateNewMiningBlock() error {
 
-	i.mu.currentWIPBlock.Records = append(i.mu.currentWIPBlock.Records, operation)
-	i.mineBlockChan <- i.mu.currentWIPBlock
+	prevBlock, depth, err := i.BlockWithLongestChain()
+	if err != nil {
+		return err
+	}
+
+	block := blockartlib.Block{
+		PrevBlock: prevBlock,
+		BlockNum:  depth + 1,
+		PubKey:    i.privKey.PublicKey,
+	}
+
+	i.mineBlockChan <- block
 
 	return nil
 }
@@ -105,27 +177,54 @@ outer:
 	}
 }
 
+// NewState creates a new state.
+func NewState() State {
+	return State{
+		shapes:      make(map[string]blockartlib.Shape),
+		shapeOwners: make(map[string]string),
+		inkLevels:   make(map[string]uint32),
+	}
+}
+
+// Copy returns a copy of the given state.
+func (s State) Copy() State {
+	s2 := NewState()
+
+	for key, value := range s.shapes {
+		s2.shapes[key] = value
+	}
+
+	for key, value := range s.shapeOwners {
+		s2.shapeOwners[key] = value
+	}
+
+	for key, value := range s.inkLevels {
+		s2.inkLevels[key] = value
+	}
+
+	return s2
+}
+
 // Given a particular blockHash, generate a new state by walking through the blockchain
 // Automatically adds states if they do not exist already
 // INVARIANT: The blockchain has all blocks from 1..n precomputed
-func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) {
-	newState = State{}
-	newState.shapes = make(map[string]blockartlib.Shape)
-	newState.shapeOwners = make(map[string]string)
-	newState.inkLevels = make(map[string]uint32)
+func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err error) {
+	newState = NewState()
 
 	err = nil
 
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	// Check if the block exists on the blockchain, fail if not found
-	block, ok := i.mu.blockchain[blockHash]
-	if !ok {
-		i.log.Println("Invalid blockhash")
-		return newState, blockartlib.InvalidBlockHashError(blockHash)
+	blockHash, err := block.Hash()
+	if err != nil {
+		return State{}, err
 	}
 
+	if block.PrevBlock == "" {
+		// Invalid block, is it a genesis block
+		return State{}, errors.New("invalid block: missing PrevBlock")
+	}
 	if block.PrevBlock == "" {
 		// Invalid block, is it a genesis block
 		return newState, nil
@@ -184,31 +283,13 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 
 	// Check if we did not find a block to work with, if so generate a "blank state"
 	if !foundState {
-		lastState = State{}
-		lastState.shapes = make(map[string]blockartlib.Shape)
-		lastState.shapeOwners = make(map[string]string)
-		lastState.inkLevels = make(map[string]uint32)
+		lastState = NewState()
 	}
 
 	// Now, attempt to work through the worklist
 	for pos := len(workListStack) - 1; pos >= 0; pos-- {
 		workingBlock := workListStack[pos]
-		createdState := State{}
-		createdState.shapes = make(map[string]blockartlib.Shape)
-		createdState.shapeOwners = make(map[string]string)
-		createdState.inkLevels = make(map[string]uint32)
-
-		for key, value := range lastState.shapes {
-			createdState.shapes[key] = value
-		}
-
-		for key, value := range lastState.shapeOwners {
-			createdState.shapeOwners[key] = value
-		}
-
-		for key, value := range lastState.inkLevels {
-			createdState.inkLevels[key] = value
-		}
+		createdState := lastState.Copy()
 
 		// For each operation, add each entry
 		for _, op := range workingBlock.Records {
@@ -223,11 +304,13 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 			} else {
 				fmt.Println("Ink levels somehow became lower than 0...")
 				createdState.inkLevels[pubkey] = 0
+				return State{}, fmt.Errorf("%s: ink levels below 0!", pubkey)
 			}
 		}
 		workingBlockHash, err := workingBlock.Hash()
 		if err != nil {
 			fmt.Println("Error hashing block")
+			return State{}, err
 		}
 
 		// Gives reward based on the block
@@ -249,7 +332,7 @@ func (i *InkMiner) CalculateState(blockHash string) (newState State, err error) 
 		lastState = createdState
 	}
 
-	newState, ok = i.states[blockHash]
+	newState, ok := i.states[blockHash]
 	if !ok {
 		i.log.Println("This should never occur...")
 		return newState, blockartlib.InvalidBlockHashError(blockHash)
