@@ -46,6 +46,8 @@ type InkMiner struct {
 		// all operations that haven't been added to the current block chain
 		mempool map[string]blockartlib.Operation
 
+		validateNumMap map[string]ValidateNumWaiter
+
 		// closed is whether the miner is closed, mostly used for tests
 		closed bool
 	}
@@ -77,6 +79,7 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	i.mu.mempool = make(map[string]blockartlib.Operation)
 	i.mu.peers = make(map[string]*peer)
 	i.privKey = privKey
+	i.mu.validateNumMap = make(map[string]ValidateNumWaiter)
 
 	i.log = log.New(os.Stderr, "", log.Flags()|log.Lshortfile)
 
