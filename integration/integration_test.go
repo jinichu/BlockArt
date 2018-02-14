@@ -95,13 +95,11 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 		RpcIpPort:        "127.0.0.1:0",
 		NumMinerToReturn: uint8(nodes),
 		MinerSettings: server.MinerNetSettings{
-			MinerSettings: server.MinerSettings{
-				MinNumMinerConnections: uint8(min),
-				HeartBeat:              heartbeatTime,
-				GenesisBlockHash:       "genesis!",
-				InkPerOpBlock:          20,
-				InkPerNoOpBlock:        5,
-			},
+			MinNumMinerConnections: uint8(min),
+			HeartBeat:              heartbeatTime,
+			GenesisBlockHash:       "genesis!",
+			InkPerOpBlock:          20,
+			InkPerNoOpBlock:        5,
 		},
 	}
 
