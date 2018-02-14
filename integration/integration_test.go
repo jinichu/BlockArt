@@ -100,6 +100,10 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 			GenesisBlockHash:       "genesis!",
 			InkPerOpBlock:          20,
 			InkPerNoOpBlock:        5,
+			CanvasSettings: server.CanvasSettings{
+				CanvasXMax: 1000000000,
+				CanvasYMax: 1000000000,
+			},
 		},
 	}
 
