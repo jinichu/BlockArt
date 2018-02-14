@@ -211,9 +211,9 @@ func (i *InkMiner) mineWorker(block blockartlib.Block, oldNonce uint32, maxItera
 }
 
 func numZeros(str string) int {
-	for i, c := range str {
-		if c != '0' {
-			return i
+	for i := len(str) - 1; i >= 0; i-- {
+		if str[i] != '0' {
+			return len(str) - i - 1
 		}
 	}
 	return len(str)

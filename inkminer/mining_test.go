@@ -15,16 +15,16 @@ func TestNumZeros(t *testing.T) {
 	}{
 		{"", 0},
 		{"aasdfasdf", 0},
-		{"0sdfasdf", 1},
-		{"00sdfasdf", 2},
+		{"sdfasdf0", 1},
+		{"sdfasdf00", 2},
 		{"000", 3},
-		{"a000", 0},
+		{"000a", 0},
 	}
 
 	for i, c := range cases {
 		out := numZeros(c.in)
 		if out != c.want {
-			t.Errorf("%d. numZeros(%s) = %d; wanted %s", i, c.in, out, c.want)
+			t.Errorf("%d. numZeros(%s) = %d; wanted %d", i, c.in, out, c.want)
 		}
 	}
 }

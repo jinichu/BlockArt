@@ -47,6 +47,10 @@
     static get is() { return 'main-app' }
 
     err (error) {
+      if (!error) {
+        return
+      }
+
       console.error(error)
       return error.error
     }
