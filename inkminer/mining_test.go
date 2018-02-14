@@ -189,16 +189,3 @@ func generateTestInkMiner(t *testing.T) *InkMiner {
 
 	return inkMiner
 }
-
-func (i *InkMiner) TestMine(t *testing.T, block blockartlib.Block) blockartlib.Block {
-	for {
-		nonce, success, err := i.mineWorker(block, 0, 10000000000)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if success {
-			block.Nonce = nonce
-			return block
-		}
-	}
-}

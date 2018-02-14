@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"testing"
 	"time"
 
 	"../blockartlib"
@@ -56,10 +57,11 @@ func (i *InkMiner) BlockWithLongestChain() (string, int, error) {
 	depths := map[string]int{}
 	max := i.settings.GenesisBlockHash
 	maxDepth := 0
-	for hash := range i.mu.blockchain {
+	for hash, block := range i.mu.blockchain {
 		depth, err := i.blockDepthLocked(hash, depths)
 		if err != nil {
-			return "", 0, err
+			i.log.Printf("invalid block: %+v: %+v", block, err)
+			continue
 		}
 		if depth > maxDepth {
 			max = hash
@@ -417,5 +419,20 @@ func (i *InkMiner) retrieveState(blockHash string) (retState State, err error) {
 		return State{}, blockartlib.InvalidBlockHashError(blockHash)
 	} else {
 		return retState, nil
+	}
+}
+
+// TestMine mines a block to completion. Should only be used for testing
+// purposes.
+func (i *InkMiner) TestMine(t *testing.T, block blockartlib.Block) blockartlib.Block {
+	for {
+		nonce, success, err := i.mineWorker(block, 0, 10000000000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if success {
+			block.Nonce = nonce
+			return block
+		}
 	}
 }
