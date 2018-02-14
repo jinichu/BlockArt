@@ -122,6 +122,11 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 }
 
 func (i *InkMinerRPC) GetShapes(req *string, resp *blockartlib.GetShapesResponse) error {
+
+	if *req == i.i.settings.GenesisBlockHash {
+		return nil
+	}
+
 	if block, ok := i.i.GetBlock(*req); ok {
 		getShapesResponse := blockartlib.GetShapesResponse{}
 		for i := 0; i < len(block.Records); i++ {

@@ -23,20 +23,36 @@
         letter-spacing: 0;
         -webkit-text-size-adjust: none;
       }
+
+      .error {
+        color: #f03e3e;
+      }
     </style>
 
     <h1>BlockArt App</h1>
+    <pre class="error">[[err(error)]]</pre>
     <pre>[[json(state)]]</pre>
 
-    <iron-ajax auto url="/api/state" handle-as="json" last-response="{{state}}" />
+    <iron-ajax
+         auto
+         url="/api/state"
+         handle-as="json"
+         last-response="{{state}}"
+         last-error="{{error}}"
+         />
   </template>
 
   <script>
   class MainApp extends Polymer.Element {
     static get is() { return 'main-app' }
 
+    err (error) {
+      console.error(error)
+      return error.error
+    }
+
     json (state) {
-      return JSON.stringify(state)
+      return JSON.stringify(state, '', '  ')
     }
   }
   customElements.define(MainApp.is, MainApp)

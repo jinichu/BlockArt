@@ -74,7 +74,7 @@ func (c *Client) GetBlock(hash string) (Block, error) {
 	for _, child := range children {
 		block, err := c.GetBlock(child)
 		if err != nil {
-			return Block{}, err
+			return Block{}, wrap(err, "GetBlock [%s]", child)
 		}
 		childBlocks = append(childBlocks, block)
 	}
@@ -89,7 +89,7 @@ func (c *Client) GetBlock(hash string) (Block, error) {
 func (c *Client) GetBlockChain() (Block, error) {
 	hash, err := c.canvas.GetGenesisBlock()
 	if err != nil {
-		return Block{}, err
+		return Block{}, wrap(err, "GetGenesisBlock")
 	}
 	return c.GetBlock(hash)
 }
