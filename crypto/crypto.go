@@ -37,6 +37,10 @@ func MarshalPrivate(key *ecdsa.PrivateKey) (string, error) {
 var curves = []elliptic.Curve{elliptic.P224(), elliptic.P256(), elliptic.P384(), elliptic.P521()}
 
 func fixCurve(curve elliptic.Curve) elliptic.Curve {
+	if curve == nil {
+		return curve
+	}
+
 	for _, c := range curves {
 		if c.Params().Name == curve.Params().Name {
 			return c
