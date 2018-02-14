@@ -71,11 +71,12 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	// Newer block
 	operation1 := blockartlib.Operation{
-		OpType:  blockartlib.ADD,
-		InkCost: 5,
-		Id:      10,
-		PubKey:  inkMiner.privKey.PublicKey,
+		OpType: blockartlib.ADD,
+		Id:     10,
+		PubKey: inkMiner.privKey.PublicKey,
 	}
+	operation1.ADD.Shape = blockartlib.TestShapeCost5
+
 	block2 := inkMiner.TestMine(t, blockartlib.Block{
 		Records:   []blockartlib.Operation{operation1},
 		PrevBlock: blockHash1,
@@ -99,7 +100,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	}
 
 	// Check if the inkLevels are updated
-	want := inkMiner.settings.InkPerNoOpBlock*1 + inkMiner.settings.InkPerOpBlock*1 - operation1.InkCost
+	want := inkMiner.settings.InkPerNoOpBlock*1 + inkMiner.settings.InkPerOpBlock*1 - 5
 	out := someState.inkLevels[inkMiner.publicKey]
 	if out != want {
 		t.Fatal("ERROR: Incorrect inkLevels. Got: ", out, " Expected: ", want)
@@ -124,10 +125,11 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	// Create a new Block and append
 	// New block contains a record that has 5 cost
 	operation2 := blockartlib.Operation{
-		OpType:  blockartlib.ADD,
-		InkCost: 5,
-		PubKey:  inkMiner.privKey.PublicKey,
+		OpType: blockartlib.ADD,
+		PubKey: inkMiner.privKey.PublicKey,
 	}
+	operation2.ADD.Shape = blockartlib.TestShapeCost5
+
 	block3 := inkMiner.TestMine(t, blockartlib.Block{
 		PrevBlock: blockHash2,
 		BlockNum:  3,
@@ -159,7 +161,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 
 	{
 		got := state3.inkLevels[inkMiner.publicKey]
-		want := inkMiner.settings.InkPerNoOpBlock*1 + inkMiner.settings.InkPerOpBlock*2 - operation1.InkCost - operation2.InkCost
+		want := inkMiner.settings.InkPerNoOpBlock*1 + inkMiner.settings.InkPerOpBlock*2 - 10
 		if got != want {
 			t.Fatal("ERROR: Incorrect inkLevels. Got: ", got, " Expected: ", want)
 		}

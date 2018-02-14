@@ -23,11 +23,6 @@ type ArtNode struct {
 // - InvalidShapeSvgStringError
 // - ShapeSvgStringTooLongError
 func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgString string, fill string, stroke string) (shapeHash string, blockHash string, inkRemaining uint32, err error) {
-	inkCost, err := calculateInkCost(shapeSvgString, fill, stroke)
-	if err != nil {
-		return "", "", 0, err
-	}
-
 	shape := Shape{
 		Type:   shapeType,
 		Svg:    shapeSvgString,
@@ -44,7 +39,6 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 		OpType:      ADD,
 		OpSig:       OpSig{},
 		PubKey:      a.privKey.PublicKey,
-		InkCost:     inkCost,
 		ValidateNum: validateNum,
 		Id:          time.Now().Unix(),
 	}
@@ -53,6 +47,11 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 	args, err = args.Sign(a.privKey)
 	if err != nil {
 		return "", "", 0, fmt.Errorf("signing error: %+v", err)
+	}
+
+	shapeHash, err = args.Hash()
+	if err != nil {
+		return "", "", 0, err
 	}
 
 	// Simple RPC call to check if we can reach the InkMiner
@@ -114,8 +113,7 @@ func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
 		return 0, err
 	}
 
-	inkRemaining = resp
-	return
+	return resp, nil
 }
 
 // Removes a shape from the canvas.
@@ -246,8 +244,11 @@ func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
 		return 0, err
 	}
 
-	inkRemaining = resp
-	return
+	if err := a.client.Close(); err != nil {
+		return 0, err
+	}
+
+	return resp, nil
 }
 
 // HELPERS
@@ -255,16 +256,16 @@ func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
 // Gets the ink cost of a particular operation
 // Can return the following errors:
 // -InvalidShapeSvgStringError
-func calculateInkCost(shapeSvgString string, fill string, stroke string) (cost uint32, err error) {
-	if fill == "transparent" {
-		cost = uint32(calculateLineCost(shapeSvgString))
+func (sh Shape) InkCost() (cost uint32, err error) {
+	if sh.Fill == "transparent" {
+		cost = uint32(calculateLineCost(sh.Svg))
 	} else {
-		if !isClosed(shapeSvgString) {
-			return 0, InvalidShapeSvgStringError(shapeSvgString)
-		} else if isSelfIntersecting(shapeSvgString) {
-			return 0, InvalidShapeSvgStringError(shapeSvgString)
+		if !isClosed(sh.Svg) {
+			return 0, InvalidShapeSvgStringError(sh.Svg)
+		} else if isSelfIntersecting(sh.Svg) {
+			return 0, InvalidShapeSvgStringError(sh.Svg)
 		}
-		cost = uint32(calculateFillCost(shapeSvgString))
+		cost = uint32(calculateFillCost(sh.Svg))
 	}
 
 	return cost, nil

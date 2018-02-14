@@ -160,7 +160,17 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	if err := client.Call("RServer.Register", req, &resp); err != nil {
 		return err
 	}
+
+	i.mu.Lock()
 	i.settings = resp
+	// Set currentHead to a dummy block initially so we can return saneish
+	// results. This might be a terrible idea.
+	i.mu.currentHead = blockartlib.Block{
+		PrevBlock: i.settings.GenesisBlockHash,
+		BlockNum:  1,
+		PubKey:    i.privKey.PublicKey,
+	}
+	i.mu.Unlock()
 
 	go i.peerDiscoveryLoop()
 	go i.heartbeatLoop()

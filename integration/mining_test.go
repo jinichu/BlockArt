@@ -78,7 +78,7 @@ func TestMiningArtNodeCluster(t *testing.T) {
 		return nil
 	})
 
-	hash, _, _, err := canvas.AddShape(0, blockartlib.PATH, "M 0 0 L 0 20 L 20 20 L 20 0 L 0 0", "transparent", "red")
+	hash, _, _, err := canvas.AddShape(6, blockartlib.PATH, "M 0 0 L 0 20 L 20 20 L 20 0 L 0 0", "transparent", "red")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestMiningArtNodeCluster(t *testing.T) {
 		t.Fatalf("returned hash is empty! %+v", hash)
 	}
 
-	if _, err := canvas.DeleteShape(0, hash); err != nil {
+	if _, err := canvas.DeleteShape(6, hash); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -17,9 +17,6 @@ type Operation struct {
 	ValidateNum uint8           //  Number of blocks that must follow the block with this operation in the blockchain
 	Id          int64           // Unique ID for this Operation (to prevent replay attacks), given by a timestamp
 
-	// TODO: get rid of InkCost and recompute when validating
-	InkCost uint32 // Cost of ink to do this operation
-
 	// These fields are only used for specific operations.
 
 	DELETE struct {
@@ -94,3 +91,13 @@ func (o Operation) PubKeyString() (string, error) {
 	}
 	return key, nil
 }
+
+// These are test shapes with a fixed cost.
+var (
+	TestShapeCost5 = Shape{
+		Type:   PATH,
+		Svg:    "M 0 0 L 0 5",
+		Fill:   "transparent",
+		Stroke: "red",
+	}
+)

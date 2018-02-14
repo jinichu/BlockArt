@@ -128,7 +128,7 @@ func TestClusterOperationPropagation(t *testing.T) {
 	var resp inkminer.NotifyOperationResponse
 	if err := ts.Miners[0].RPC().NotifyOperation(inkminer.NotifyOperationRequest{
 		Operation: ts.NewAddOp(blockartlib.Operation{
-			InkCost: 1,
+			Id: 1,
 		}),
 	}, &resp); err != nil {
 		t.Fatal(err)
@@ -136,7 +136,7 @@ func TestClusterOperationPropagation(t *testing.T) {
 
 	if err := ts.Miners[0].RPC().NotifyOperation(inkminer.NotifyOperationRequest{
 		Operation: ts.NewAddOp(blockartlib.Operation{
-			InkCost: 1,
+			Id: 1,
 		}),
 	}, &resp); err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestClusterOperationPropagation(t *testing.T) {
 
 	if err := ts.Miners[1].RPC().NotifyOperation(inkminer.NotifyOperationRequest{
 		Operation: ts.NewAddOp(blockartlib.Operation{
-			InkCost: 2,
+			Id: 2,
 		}),
 	}, &resp); err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestClusterOperationPropagation(t *testing.T) {
 
 	if err := ts.Miners[2].RPC().NotifyOperation(inkminer.NotifyOperationRequest{
 		Operation: ts.NewAddOp(blockartlib.Operation{
-			InkCost: 3,
+			Id: 3,
 		}),
 	}, &resp); err != nil {
 		t.Fatal(err)

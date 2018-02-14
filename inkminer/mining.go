@@ -380,25 +380,43 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 			return State{}, err
 		}
 
-		var opCost uint32
-		// TODO compute InkCost and ShapeHash here
-		if op.OpType == blockartlib.ADD {
-			opCost = op.InkCost
+		switch op.OpType {
+		case blockartlib.ADD:
+			opCost, err := op.ADD.Shape.InkCost()
+			if err != nil {
+				return State{}, err
+			}
+
+			if createdState.inkLevels[pubkey] >= opCost {
+				createdState.inkLevels[pubkey] -= opCost
+			} else {
+				return State{}, fmt.Errorf("%s: ink levels below 0!", pubkey)
+			}
+
 			createdState.shapes[opHash] = op.ADD.Shape
 			createdState.shapeOwners[opHash] = pubkey
-		} else if op.OpType == blockartlib.DELETE {
-			// TODO
-			return State{}, fmt.Errorf("DELETE is unimplemented")
-		} else {
-			return State{}, fmt.Errorf("invalid OpType: %+v", op)
-		}
 
-		if createdState.inkLevels[pubkey] >= opCost {
-			createdState.inkLevels[pubkey] = createdState.inkLevels[pubkey] - opCost
-		} else {
-			fmt.Println("Ink levels somehow became lower than 0...")
-			createdState.inkLevels[pubkey] = 0
-			return State{}, fmt.Errorf("%s: ink levels below 0!", pubkey)
+		case blockartlib.DELETE:
+			shapeHash := op.DELETE.ShapeHash
+			shape, ok := createdState.shapes[shapeHash]
+			if !ok {
+				return State{}, fmt.Errorf("shape doesn't exist")
+			}
+			owner := createdState.shapeOwners[shapeHash]
+			if owner != pubkey {
+				return State{}, fmt.Errorf("owner != user: %q != %q", owner, pubkey)
+			}
+			delete(createdState.shapes, shapeHash)
+			delete(createdState.shapeOwners, shapeHash)
+
+			opCost, err := shape.InkCost()
+			if err != nil {
+				return State{}, err
+			}
+			createdState.inkLevels[pubkey] += opCost
+
+		default:
+			return State{}, fmt.Errorf("invalid OpType: %+v", op)
 		}
 	}
 

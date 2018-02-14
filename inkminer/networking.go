@@ -379,23 +379,23 @@ func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error) {
 
 	state, err := i.CalculateState(block)
 	if err != nil {
-		return false, err
-	}
-
-	i.mu.Lock()
-	for opHash, validateNumWaiter := range i.mu.validateNumMap {
-		if state.commitedOperations[opHash] >= int(validateNumWaiter.validateNum) {
-			var blockHash string
-			currentBlock := block
-			for j := 0; j < int(validateNumWaiter.validateNum); j++ {
-				blockHash = currentBlock.PrevBlock
-				currentBlock = i.mu.blockchain[currentBlock.PrevBlock]
+		log.Printf("got possibly invalid block, orphaned/out of order?: %+v: %+v", block, err)
+	} else {
+		i.mu.Lock()
+		for opHash, validateNumWaiter := range i.mu.validateNumMap {
+			if state.commitedOperations[opHash] >= int(validateNumWaiter.validateNum) {
+				var blockHash string
+				currentBlock := block
+				for j := 0; j < int(validateNumWaiter.validateNum); j++ {
+					blockHash = currentBlock.PrevBlock
+					currentBlock = i.mu.blockchain[currentBlock.PrevBlock]
+				}
+				delete(i.mu.validateNumMap, opHash)
+				validateNumWaiter.done <- blockHash
 			}
-			delete(i.mu.validateNumMap, opHash)
-			validateNumWaiter.done <- blockHash
 		}
+		i.mu.Unlock()
 	}
-	i.mu.Unlock()
 
 	return true, i.announceBlock(block)
 }

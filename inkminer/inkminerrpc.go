@@ -43,7 +43,11 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	}
 
 	inkLevel := state.inkLevels[pubKey]
-	if inkLevel < req.InkCost {
+	inkCost, err := req.ADD.Shape.InkCost()
+	if err != nil {
+		return err
+	}
+	if inkLevel < inkCost {
 		return blockartlib.InsufficientInkError(state.inkLevels[pubKey])
 	}
 	if err := i.i.addOperation(*req); err != nil {
@@ -56,8 +60,7 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	if err != nil {
 		return err
 	}
-	validateNum := req.ValidateNum
-	blockHash = i.i.waitForValidateNum(opHash, validateNum)
+	blockHash = i.i.waitForValidateNum(opHash, req.ValidateNum)
 
 	state, err = i.i.CalculateState(i.i.currentHead())
 	if err != nil {
@@ -99,7 +102,12 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 		return err
 	}
 
-	// TODO: wait for ValidateNum
+	opHash, err := req.Hash()
+	if err != nil {
+		return err
+	}
+
+	i.i.waitForValidateNum(opHash, req.ValidateNum)
 
 	state, err := i.i.CalculateState(i.i.currentHead())
 	if err != nil {
