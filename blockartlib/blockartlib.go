@@ -36,6 +36,13 @@ const (
 	// CIRCLE
 )
 
+func (st ShapeType) String() string {
+	if st == PATH {
+		return "path"
+	}
+	return "unknown"
+}
+
 // Settings for a canvas in BlockArt.
 type CanvasSettings struct {
 	// Canvas dimensions

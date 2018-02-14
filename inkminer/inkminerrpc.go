@@ -1,8 +1,6 @@
 package inkminer
 
 import (
-	"fmt"
-
 	"../blockartlib"
 	server "../server"
 )
@@ -65,8 +63,7 @@ func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
 
 	if _, ok := i.i.states[blockHash].shapes[*req]; ok {
 		shape := i.i.states[blockHash].shapes[*req]
-		svgString := fmt.Sprintf(`<path d="%s" stroke="%s" fill="%s"/>`, shape.Svg, shape.Stroke, shape.Fill)
-		*resp = svgString
+		*resp = shape.SvgString()
 		return nil
 	}
 	return blockartlib.InvalidShapeHashError(*req)

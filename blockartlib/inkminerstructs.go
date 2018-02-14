@@ -2,6 +2,7 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 
 	crypto "../crypto"
@@ -38,9 +39,14 @@ type OpSig struct {
 }
 
 type Shape struct {
+	Type   ShapeType
 	Svg    string // SVG string of this shape
 	Fill   string
 	Stroke string
+}
+
+func (s Shape) SvgString() string {
+	return fmt.Sprintf(`<%s d="%s" stroke="%s" fill="%s"/>`, s.Type, s.Svg, s.Stroke, s.Fill)
 }
 
 type AddShapeResponse struct {

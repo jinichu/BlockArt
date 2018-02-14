@@ -34,6 +34,9 @@ func validateShape(shape blockartlib.Shape) error {
 	if shape.Svg == "" || shape.Fill == "" || shape.Stroke == "" {
 		return fmt.Errorf("one of Svg, Fill, Stroke is empty: %+v", shape)
 	}
+	if shape.Type != blockartlib.PATH {
+		return fmt.Errorf("unknown shape type: %+v", shape.Type)
+	}
 	return nil
 }
 

@@ -28,6 +28,7 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 	}
 
 	shape := Shape{
+		Type:   shapeType,
 		Svg:    shapeSvgString,
 		Fill:   fill,
 		Stroke: stroke,
