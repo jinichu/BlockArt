@@ -27,7 +27,7 @@ func main() {
 func run() error {
 	minerAddr := "127.0.0.1:8080"
 	privKey, err := crypto.LoadPrivate(
-		"testkeys/test1-public.key", "testkeys/test2-private.key",
+		"testkeys/test1-public.key", "testkeys/test1-private.key",
 	)
 	if err != nil {
 		return err

@@ -139,7 +139,7 @@ func (i *InkMiner) Listen(serverAddr string) error {
 	i.addr = localAddr
 
 	i.log.SetPrefix(colors.Green(i.addr) + " ")
-	i.log.Printf("InkMiner running...")
+	i.log.Printf("InkMiner listening on %s", localAddr)
 
 	client, err := dialRPC(serverAddr)
 	if err != nil {

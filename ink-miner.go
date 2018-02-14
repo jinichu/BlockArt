@@ -27,6 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if err := m.Listen(serverAddr); err != nil {
 		log.Fatal(err)
 	}
