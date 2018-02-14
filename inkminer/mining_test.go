@@ -106,12 +106,12 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	}
 
 	// Check if the inkMiner contains the block
-	if _, ok := inkMiner.states[blockHash2]; !ok {
+	if _, ok := inkMiner.mu.states[blockHash2]; !ok {
 		t.Log("ERROR: InkMiner has not saved the state to it's map")
 	}
 
 	// Check if the first block was computed properly
-	state1, ok := inkMiner.states[blockHash1]
+	state1, ok := inkMiner.mu.states[blockHash1]
 	if !ok {
 		t.Fatal("Block hash was not computed properly, invariant violated")
 	}
@@ -152,7 +152,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	state3, ok := inkMiner.states[block3Hash]
+	state3, ok := inkMiner.mu.states[block3Hash]
 	if !ok {
 		t.Fatal("Block State 3 was not stored correctly")
 	}

@@ -1,6 +1,8 @@
 package inkminer
 
 import (
+	"fmt"
+
 	"../blockartlib"
 	server "../server"
 )
@@ -24,7 +26,8 @@ func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp
 }
 
 func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
-	blockHash, err := i.i.currentHead.Hash()
+	block := i.i.currentHead()
+	blockHash, err := block.Hash()
 	if err != nil {
 		return err
 	}
@@ -34,35 +37,47 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 		return err
 	}
 
-	if i.i.states[blockHash].inkLevels[pubKey] < req.InkCost {
-		return blockartlib.InsufficientInkError(i.i.states[blockHash].inkLevels[pubKey])
+	state, err := i.i.CalculateState(block)
+	if err != nil {
+		return err
+	}
+
+	inkLevel := state.inkLevels[pubKey]
+	if inkLevel < req.InkCost {
+		return blockartlib.InsufficientInkError(state.inkLevels[pubKey])
 	}
 	if err := i.i.addOperation(*req); err != nil {
-		return err
+		return fmt.Errorf("add operation error: %+v", err)
 	}
 	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
 	// TODO: InkMiner.states should be updated to have the current state too
 
-	blockHash, err = i.i.currentHead.Hash()
+	block = i.i.currentHead()
+
+	blockHash, err = block.Hash()
 	if err != nil {
 		return err
 	}
-	addShapeResponse := blockartlib.AddShapeResponse{
-		BlockHash:    blockHash,
-		InkRemaining: i.i.states[blockHash].inkLevels[pubKey],
+
+	state, err = i.i.CalculateState(block)
+	if err != nil {
+		return err
 	}
-	*resp = addShapeResponse
+
+	*resp = blockartlib.AddShapeResponse{
+		BlockHash:    blockHash,
+		InkRemaining: state.inkLevels[pubKey],
+	}
 	return nil
 }
 
 func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
-	blockHash, err := i.i.currentHead.Hash()
+	state, err := i.i.CalculateState(i.i.currentHead())
 	if err != nil {
 		return err
 	}
 
-	if _, ok := i.i.states[blockHash].shapes[*req]; ok {
-		shape := i.i.states[blockHash].shapes[*req]
+	if shape, ok := state.shapes[*req]; ok {
 		*resp = shape.SvgString()
 		return nil
 	}
@@ -70,11 +85,12 @@ func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
 }
 
 func (i *InkMinerRPC) GetInk(req *string, resp *uint32) error {
-	blockHash, err := i.i.currentHead.Hash()
+	state, err := i.i.CalculateState(i.i.currentHead())
 	if err != nil {
 		return err
 	}
-	*resp = i.i.states[blockHash].inkLevels[i.i.publicKey]
+
+	*resp = state.inkLevels[i.i.publicKey]
 	return nil
 }
 
@@ -82,8 +98,10 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 	if err := i.i.addOperation(*req); err != nil {
 		return err
 	}
+
 	// TODO: wait for ValidateNum
-	blockHash, err := i.i.currentHead.Hash()
+
+	state, err := i.i.CalculateState(i.i.currentHead())
 	if err != nil {
 		return err
 	}
@@ -93,7 +111,7 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 		return err
 	}
 
-	*resp = i.i.states[blockHash].inkLevels[pubKey]
+	*resp = state.inkLevels[pubKey]
 	return nil
 }
 

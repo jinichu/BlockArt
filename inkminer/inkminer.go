@@ -22,12 +22,10 @@ type InkMiner struct {
 	privKey   *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	publicKey string            // Public key of the Miner (Note: is this needed?)
 
-	settings    server.MinerNetSettings // Settings for this BlockArt network instance
-	currentHead blockartlib.Block       // Block that InkMiner is mining on (current head)
-	rs          *rpc.Server             // RPC Server
-	states      map[string]State        // States of the canvas at a given block
-	stopper     *stopper.Stopper        // TODO: [Jonathan] Figure what this is
-	log         *log.Logger             // TODO: [Jonathan] Figure what this is
+	settings server.MinerNetSettings // Settings for this BlockArt network instance
+	rs       *rpc.Server             // RPC Server
+	stopper  *stopper.Stopper        // TODO: [Jonathan] Figure what this is
+	log      *log.Logger             // TODO: [Jonathan] Figure what this is
 
 	// newOpChan should be used to notify the mining loop about new operations
 	newOpChan chan blockartlib.Operation
@@ -45,10 +43,21 @@ type InkMiner struct {
 		blockchain map[string]blockartlib.Block
 		// all operations that haven't been added to the current block chain
 		mempool map[string]blockartlib.Operation
+		// currentHead is the block that InkMiner is mining on
+		currentHead blockartlib.Block
+		// states of the canvas at a given block
+		states map[string]State
 
 		// closed is whether the miner is closed, mostly used for tests
 		closed bool
 	}
+}
+
+func (i *InkMiner) currentHead() blockartlib.Block {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	return i.mu.currentHead
 }
 
 // getOutboundIP sets up a UDP connection (but doesn't send anything) and uses
@@ -67,12 +76,12 @@ func getOutboundIP() string {
 
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	i := &InkMiner{
-		states:       make(map[string]State),
 		stopper:      stopper.New(),
 		newOpChan:    make(chan blockartlib.Operation, 1),
 		newBlockChan: make(chan blockartlib.Block, 1),
 	}
 
+	i.mu.states = make(map[string]State)
 	i.mu.blockchain = make(map[string]blockartlib.Block)
 	i.mu.mempool = make(map[string]blockartlib.Operation)
 	i.mu.peers = make(map[string]*peer)
@@ -90,9 +99,6 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	if err := i.rs.Register(i.RPC()); err != nil {
 		return nil, err
 	}
-
-	// Initialize the map and channel variables
-	i.states = make(map[string]State)
 
 	return i, nil
 }

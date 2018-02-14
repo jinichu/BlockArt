@@ -11,8 +11,9 @@ import (
 func setup() (inkMinerRPC InkMinerRPC, err error) {
 	inkMiner := &InkMiner{
 		publicKey: "public",
-		states:    make(map[string]State),
 	}
+	inkMiner.mu.states = make(map[string]State)
+
 	block1 := blockartlib.Block{
 		PrevBlock: "1234",
 		Nonce:     2,
@@ -26,7 +27,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		shapeOwners: make(map[string]string),
 		inkLevels:   make(map[string]uint32),
 	}
-	inkMiner.states[block1Hash] = state1
+	inkMiner.mu.states[block1Hash] = state1
 	block2 := blockartlib.Block{
 		PrevBlock: block1Hash,
 		Nonce:     3,
@@ -40,7 +41,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		shapeOwners: make(map[string]string),
 		inkLevels:   make(map[string]uint32),
 	}
-	inkMiner.states[block2Hash] = state2
+	inkMiner.mu.states[block2Hash] = state2
 	block3 := blockartlib.Block{
 		PrevBlock: block2Hash,
 		Nonce:     3,
@@ -87,8 +88,8 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 		return InkMinerRPC{}, err
 	}
 
-	inkMiner.states[block3Hash] = state3
-	inkMiner.currentHead = block3
+	inkMiner.mu.states[block3Hash] = state3
+	inkMiner.mu.currentHead = block3
 	inkMiner.mu.blockchain = make(map[string]blockartlib.Block)
 	inkMiner.mu.blockchain[block1Hash] = block1
 	inkMiner.mu.blockchain[block2Hash] = block2
@@ -153,7 +154,7 @@ func TestGetShapes(t *testing.T) {
 	if err == nil {
 		t.Fatal("This block shouldn't exist")
 	}
-	args, err = i.i.currentHead.Hash()
+	args, err = i.i.mu.currentHead.Hash()
 	if err != nil {
 		t.Error(err)
 	}
@@ -187,7 +188,7 @@ func TestGetChildrenBlocks(t *testing.T) {
 	if err == nil {
 		t.Fatal("This block shouldn't exist")
 	}
-	args, err = i.i.currentHead.Hash()
+	args, err = i.i.mu.currentHead.Hash()
 	if err != nil {
 		t.Error(err)
 	}

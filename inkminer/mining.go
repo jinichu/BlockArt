@@ -55,8 +55,11 @@ func (i *InkMiner) BlockWithLongestChain() (string, int, error) {
 	defer i.mu.Unlock()
 
 	depths := map[string]int{}
+
 	max := i.settings.GenesisBlockHash
+	var maxBlock blockartlib.Block
 	maxDepth := 0
+
 	for hash, block := range i.mu.blockchain {
 		depth, err := i.blockDepthLocked(hash, depths)
 		if err != nil {
@@ -66,8 +69,11 @@ func (i *InkMiner) BlockWithLongestChain() (string, int, error) {
 		if depth > maxDepth {
 			max = hash
 			maxDepth = depth
+			maxBlock = block
 		}
 	}
+
+	i.mu.currentHead = maxBlock
 
 	return max, maxDepth, nil
 }
@@ -268,7 +274,7 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 	}
 
 	// If the state was already previously calculated, simply return it
-	if state, ok := i.states[blockHash]; ok {
+	if state, ok := i.mu.states[blockHash]; ok {
 		return state, nil
 	}
 
@@ -295,12 +301,12 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 		if err != nil {
 			return newState, err
 		}
-		_, ok = i.states[nextHash]
+		_, ok = i.mu.states[nextHash]
 		if ok {
 			// We did it! We found a block that has some kind of state attached to it!
 			// Save this state, we will use it to compute the rest of our worklist
 			foundState = true
-			lastState = i.states[nextHash]
+			lastState = i.mu.states[nextHash]
 			break
 		} else {
 			// Not found just yet, add this block to the worklist and keep going
@@ -332,12 +338,12 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 			fmt.Println("Error hashing block")
 			return State{}, err
 		}
-		i.states[workingBlockHash] = createdState
+		i.mu.states[workingBlockHash] = createdState
 		// Set the state walker with the newest state
 		lastState = createdState
 	}
 
-	newState, ok := i.states[blockHash]
+	newState, ok := i.mu.states[blockHash]
 	if !ok {
 		i.log.Println("This should never occur...")
 		return newState, blockartlib.InvalidBlockHashError(blockHash)
@@ -412,14 +418,6 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 	}
 
 	return createdState, nil
-}
-
-func (i *InkMiner) retrieveState(blockHash string) (retState State, err error) {
-	if retState, ok := i.states[blockHash]; !ok {
-		return State{}, blockartlib.InvalidBlockHashError(blockHash)
-	} else {
-		return retState, nil
-	}
 }
 
 // TestMine mines a block to completion. Should only be used for testing

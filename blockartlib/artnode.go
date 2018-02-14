@@ -2,6 +2,7 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math"
 	"net/rpc"
 	"strconv"
@@ -51,7 +52,7 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 
 	args, err = args.Sign(a.privKey)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", 0, fmt.Errorf("signing error: %+v", err)
 	}
 
 	// Simple RPC call to check if we can reach the InkMiner
@@ -63,10 +64,7 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 	}
 
 	var resp AddShapeResponse
-	err = a.client.Call("InkMinerRPC.AddShape", args, &resp)
-	//TODO: retrieve blockHash, inkRemaining from call to ink miner to add shape
-
-	if err != nil {
+	if err = a.client.Call("InkMinerRPC.AddShape", args, &resp); err != nil {
 		return "", "", 0, err
 	}
 

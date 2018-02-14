@@ -30,7 +30,8 @@ type ShapeType int
 
 const (
 	// Path shape.
-	PATH ShapeType = iota
+	UNKNOWN_SHAPE ShapeType = iota
+	PATH
 
 	// Circle shape (extra credit).
 	// CIRCLE

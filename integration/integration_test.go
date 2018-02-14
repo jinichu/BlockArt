@@ -98,7 +98,9 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 			MinerSettings: server.MinerSettings{
 				MinNumMinerConnections: uint8(min),
 				HeartBeat:              heartbeatTime,
-				GenesisBlockHash:       "genesis-block",
+				GenesisBlockHash:       "genesis!",
+				InkPerOpBlock:          20,
+				InkPerNoOpBlock:        5,
 			},
 		},
 	}

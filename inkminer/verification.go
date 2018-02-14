@@ -45,12 +45,17 @@ func validateOp(operation blockartlib.Operation) error {
 		return err
 	}
 
-	if operation.OpType != blockartlib.ADD && operation.OpType != blockartlib.DELETE {
+	switch operation.OpType {
+	case blockartlib.ADD:
+		if err := validateShape(operation.ADD.Shape); err != nil {
+			return err
+		}
+	case blockartlib.DELETE:
+		if operation.DELETE.ShapeHash == "" {
+			return fmt.Errorf("missing ShapeHash")
+		}
+	default:
 		return fmt.Errorf("invalid operation type: %+v", operation.OpType)
-	}
-
-	if err := validateShape(operation.ADD.Shape); err != nil {
-		return err
 	}
 
 	return nil

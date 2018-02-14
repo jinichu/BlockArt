@@ -34,8 +34,21 @@ func MarshalPrivate(key *ecdsa.PrivateKey) (string, error) {
 	return string(pem.EncodeToMemory(keyBlock)), nil
 }
 
+var curves = []elliptic.Curve{elliptic.P224(), elliptic.P256(), elliptic.P384(), elliptic.P521()}
+
+func fixCurve(curve elliptic.Curve) elliptic.Curve {
+	for _, c := range curves {
+		if c.Params().Name == curve.Params().Name {
+			return c
+		}
+	}
+	return curve
+}
+
 // MarshalPublic marshals a x509/PEM encoded ECDSA public key.
 func MarshalPublic(key *ecdsa.PublicKey) (string, error) {
+	key.Curve = fixCurve(key.Curve)
+
 	rawPriv, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
 		return "", err

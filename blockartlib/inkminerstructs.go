@@ -88,5 +88,9 @@ func (o Operation) Sign(key ecdsa.PrivateKey) (Operation, error) {
 }
 
 func (o Operation) PubKeyString() (string, error) {
-	return crypto.MarshalPublic(&o.PubKey)
+	key, err := crypto.MarshalPublic(&o.PubKey)
+	if err != nil {
+		return "", fmt.Errorf("PubKeyString error for operation %+v: %+v", o, err)
+	}
+	return key, nil
 }
