@@ -35,7 +35,7 @@ func SucceedsSoon(t *testing.T, f func() error) {
 			if err == nil {
 				return
 			}
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 		}
 	}()
 	var err error
@@ -98,6 +98,7 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 			MinerSettings: server.MinerSettings{
 				MinNumMinerConnections: uint8(min),
 				HeartBeat:              heartbeatTime,
+				GenesisBlockHash:       "genesis-block",
 			},
 		},
 	}

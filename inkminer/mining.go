@@ -67,7 +67,7 @@ func (i *InkMiner) BlockWithLongestChain() (string, int, error) {
 		}
 	}
 
-	return max, 0, nil
+	return max, maxDepth, nil
 }
 
 func (i *InkMiner) GetBlock(hash string) (blockartlib.Block, bool) {
@@ -95,7 +95,7 @@ func (i *InkMiner) getStateForHash(hash string) (State, error) {
 
 func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
 
-	prevBlockHash, depth, err := i.BlockWithLongestChain()
+	prevBlockHash, _, err := i.BlockWithLongestChain()
 	if err != nil {
 		return blockartlib.Block{}, err
 	}
@@ -107,7 +107,7 @@ func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
 
 	block := blockartlib.Block{
 		PrevBlock: prevBlockHash,
-		BlockNum:  depth + 1,
+		BlockNum:  state.blockNum + 1,
 		PubKey:    i.privKey.PublicKey,
 	}
 
@@ -133,32 +133,32 @@ var TestBlockDelay time.Duration
 
 func (i *InkMiner) generateNewMiningBlockLoop(mineBlockChan chan blockartlib.Block) {
 	for {
+		i.log.Printf("block generate loop")
 
 		// For testing purposes to limit computational cost of block mining.
 		if TestBlockDelay > 0 {
 			time.Sleep(TestBlockDelay)
-
-			select {
-			case <-i.stopper.ShouldStop():
-				return
-			default:
-			}
 		}
 
 		// Clear the newOp/newBlock channels to avoid duplicate work.
+	clearLoop:
 		for {
 			select {
 			case <-i.newOpChan:
 			case <-i.newBlockChan:
+			case <-i.stopper.ShouldStop():
+				return
 			default:
-				break
+				break clearLoop
 			}
 		}
 
 		block, err := i.generateNewMiningBlock()
 		if err != nil {
-			log.Printf("failed to generate new mining block: %+v", err)
+			i.log.Printf("failed to generate new mining block: %+v", err)
+			continue
 		}
+		log.Printf("generated mining block!")
 		mineBlockChan <- block
 
 		// wait for a new operation or block to come in
@@ -219,29 +219,29 @@ outer:
 		nonce := uint32(0) //
 		found := false
 		var err error
-		for {
+		for !found {
+			i.log.Printf("mining...")
 			// attempt to mine a block for a set number of iterations
 			nonce, found, err = i.mineWorker(block, nonce, 1000)
 			if err != nil {
 				log.Printf("Mining error: %+v", err)
 				continue outer
 			}
-			if found {
-				block.Nonce = nonce
-				if err := i.announceBlock(block); err != nil {
-					log.Printf("Mining error: %+v", err)
-					continue outer
-				}
-
-			}
 
 			// Check if there's a new block to mine on instead.
 			select {
 			case block = <-blocks:
+				continue outer
 			case <-i.stopper.ShouldStop():
 				return
 			default:
 			}
+		}
+
+		i.log.Printf("found block!")
+		block.Nonce = nonce
+		if _, err := i.AddBlock(block); err != nil {
+			i.log.Printf("Mining error: %+v", err)
 		}
 	}
 }
@@ -260,7 +260,7 @@ func (i *InkMiner) CalculateState(block blockartlib.Block) (newState State, err 
 		return State{}, err
 	}
 
-	if block.PrevBlock == "" {
+	if block.PrevBlock == "" && block.PrevBlock != i.settings.GenesisBlockHash {
 		// Invalid block, is it a genesis block
 		return State{}, errors.New("invalid block: missing PrevBlock")
 	}
@@ -349,7 +349,7 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 
 	createdState.blockNum += 1
 	if createdState.blockNum != block.BlockNum {
-		return State{}, fmt.Errorf("expected block to have BlockNum = %d; got %d", createdState.blockNum, block.BlockNum)
+		return State{}, fmt.Errorf("expected block to have BlockNum = %d; got %d\nblock: %+v", createdState.blockNum, block.BlockNum, block)
 	}
 
 	// increment the committed time by one
