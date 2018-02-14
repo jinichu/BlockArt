@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"../blockartlib"
 	"../crypto"
@@ -86,28 +87,105 @@ func (i *InkMiner) mineBlock(operation blockartlib.Operation) error {
 	return errors.New("unimplemented")
 }
 
-func (i *InkMiner) generateNewMiningBlock() error {
-
-	prevBlock, depth, err := i.BlockWithLongestChain()
+func (i *InkMiner) getStateForHash(hash string) (State, error) {
+	if hash == i.settings.GenesisBlockHash {
+		return NewState(), nil
+	}
+	block, ok := i.GetBlock(hash)
+	if !ok {
+		return State{}, fmt.Errorf("hash not found: %+v", hash)
+	}
+	state, err := i.CalculateState(block)
 	if err != nil {
-		return err
+		return State{}, err
+	}
+	return state, nil
+}
+
+func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
+
+	prevBlockHash, depth, err := i.BlockWithLongestChain()
+	if err != nil {
+		return blockartlib.Block{}, err
+	}
+
+	state, err := i.getStateForHash(prevBlockHash)
+	if err != nil {
+		return blockartlib.Block{}, err
 	}
 
 	block := blockartlib.Block{
-		PrevBlock: prevBlock,
+		PrevBlock: prevBlockHash,
 		BlockNum:  depth + 1,
 		PubKey:    i.privKey.PublicKey,
 	}
 
-	i.mineBlockChan <- block
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
-	return nil
+	for hash, op := range i.mu.mempool {
+		if _, ok := state.commitedOperations[hash]; ok {
+			continue
+		}
+
+		block.Records = append(block.Records, op)
+		if _, err := i.TransformState(state, block); err != nil {
+			log.Printf("op can't be applied to block: %+v, %+v", op, err)
+			block.Records = block.Records[:len(block.Records)-1]
+		}
+	}
+
+	return block, nil
 }
 
-func (i *InkMiner) startMining() error {
-	i.mineBlockChan = make(chan blockartlib.Block, 10)
+var TestBlockDelay time.Duration
 
-	go i.minerLoop(i.mineBlockChan)
+func (i *InkMiner) generateNewMiningBlockLoop(mineBlockChan chan blockartlib.Block) {
+	for {
+
+		// For testing purposes to limit computational cost of block mining.
+		if TestBlockDelay > 0 {
+			time.Sleep(TestBlockDelay)
+
+			select {
+			case <-i.stopper.ShouldStop():
+				return
+			default:
+			}
+		}
+
+		// Clear the newOp/newBlock channels to avoid duplicate work.
+		for {
+			select {
+			case <-i.newOpChan:
+			case <-i.newBlockChan:
+			default:
+				break
+			}
+		}
+
+		block, err := i.generateNewMiningBlock()
+		if err != nil {
+			log.Printf("failed to generate new mining block: %+v", err)
+		}
+		mineBlockChan <- block
+
+		// wait for a new operation or block to come in
+		select {
+		case <-i.newOpChan:
+		case <-i.newBlockChan:
+		case <-i.stopper.ShouldStop():
+			return
+		}
+	}
+}
+
+// startMining should only ever be called once.
+func (i *InkMiner) startMining() error {
+	mineBlockChan := make(chan blockartlib.Block)
+
+	go i.generateNewMiningBlockLoop(mineBlockChan)
+	go i.minerLoop(mineBlockChan)
 
 	return nil
 }
@@ -143,7 +221,7 @@ func numZeros(str string) int {
 	return len(str)
 }
 
-func (i *InkMiner) minerLoop(blocks chan blockartlib.Block) {
+func (i *InkMiner) minerLoop(blocks <-chan blockartlib.Block) {
 outer:
 	for {
 		block := <-blocks  // Grab a block from the channel

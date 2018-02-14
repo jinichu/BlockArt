@@ -16,6 +16,8 @@ import (
 
 func init() {
 	log.SetFlags(log.Flags() | log.Lshortfile)
+
+	inkminer.TestBlockDelay = 10 * time.Second
 }
 
 func SucceedsSoon(t *testing.T, f func() error) {
@@ -61,12 +63,21 @@ type TestCluster struct {
 
 var heartbeatTime uint32 = 10000
 
-// SetHeartBeat sets the amount of time between heartbeats.
+// SetHeartBeat sets the amount of time between heartbeats in MS.
 func SetHeartBeat(time uint32) func() {
 	old := heartbeatTime
 	heartbeatTime = time
 	return func() {
 		heartbeatTime = old
+	}
+}
+
+// SetBlockDelay sets the amount of time between blocks mined.
+func SetBlockDelay(time time.Duration) func() {
+	old := inkminer.TestBlockDelay
+	inkminer.TestBlockDelay = time
+	return func() {
+		inkminer.TestBlockDelay = old
 	}
 }
 

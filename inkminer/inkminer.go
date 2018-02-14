@@ -22,14 +22,19 @@ type InkMiner struct {
 	privKey   *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	publicKey string            // Public key of the Miner (Note: is this needed?)
 
-	latest        []*blockartlib.Block    // Latest blocks in the blockchain
-	settings      server.MinerNetSettings // Settings for this BlockArt network instance
-	currentHead   blockartlib.Block       // Block that InkMiner is mining on (current head)
-	mineBlockChan chan blockartlib.Block  // Channel used to distribute blocks
-	rs            *rpc.Server             // RPC Server
-	states        map[string]State        // States of the canvas at a given block
-	stopper       *stopper.Stopper        // TODO: [Jonathan] Figure what this is
-	log           *log.Logger             // TODO: [Jonathan] Figure what this is
+	latest      []*blockartlib.Block    // Latest blocks in the blockchain
+	settings    server.MinerNetSettings // Settings for this BlockArt network instance
+	currentHead blockartlib.Block       // Block that InkMiner is mining on (current head)
+	rs          *rpc.Server             // RPC Server
+	states      map[string]State        // States of the canvas at a given block
+	stopper     *stopper.Stopper        // TODO: [Jonathan] Figure what this is
+	log         *log.Logger             // TODO: [Jonathan] Figure what this is
+
+	// newOpChan should be used to notify the mining loop about new operations
+	newOpChan chan blockartlib.Operation
+	// newBlockChan should be used to notify the mining loop about new blocks
+	// received
+	newBlockChan chan blockartlib.Block
 
 	mu struct {
 		sync.Mutex
@@ -73,8 +78,10 @@ stopper       *stopper.Stopper
 
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	i := &InkMiner{
-		states:  make(map[string]State),
-		stopper: stopper.New(),
+		states:       make(map[string]State),
+		stopper:      stopper.New(),
+		newOpChan:    make(chan blockartlib.Operation, 1),
+		newBlockChan: make(chan blockartlib.Block, 1),
 	}
 
 	i.mu.blockchain = make(map[string]blockartlib.Block)
@@ -97,7 +104,6 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 
 	// Initialize the map and channel variables
 	i.states = make(map[string]State)
-	i.mineBlockChan = make(chan blockartlib.Block)
 
 	return i, nil
 }
@@ -160,6 +166,10 @@ func (i *InkMiner) Listen(serverAddr string) error {
 
 	go i.peerDiscoveryLoop()
 	go i.heartbeatLoop()
+
+	if err := i.startMining(); err != nil {
+		return err
+	}
 
 	for {
 		select {

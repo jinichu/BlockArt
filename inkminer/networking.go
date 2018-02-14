@@ -14,6 +14,7 @@ import (
 var ErrUnimplemented = errors.New("unimplemented")
 
 const Timeout = 2 * time.Second
+const HeartBeatsPerInterval = 5
 
 func dialRPC(addr string) (*rpc.Client, error) {
 	conn, err := net.DialTimeout("tcp", addr, Timeout)
@@ -24,8 +25,8 @@ func dialRPC(addr string) (*rpc.Client, error) {
 }
 
 func (i *InkMiner) heartbeatLoop() {
-	// send tick twice as fast as required to avoid timeouts
-	duration := time.Millisecond * time.Duration(i.settings.HeartBeat) / 2
+	// send tick n times as fast as required to avoid timeouts
+	duration := time.Millisecond * time.Duration(i.settings.HeartBeat) / HeartBeatsPerInterval
 	ticker := time.NewTicker(duration)
 	for {
 		select {
@@ -319,7 +320,7 @@ func (i *InkMiner) removePeer(p *peer) error {
 
 func (i *InkMiner) peerHeartBeat(p *peer) {
 	timeout := time.Millisecond * time.Duration(i.settings.HeartBeat)
-	duration := timeout / 2
+	duration := timeout / HeartBeatsPerInterval
 	ticker := time.NewTicker(duration)
 
 	remove := func() {
