@@ -53,8 +53,6 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	if err := i.i.addOperation(*req); err != nil {
 		return fmt.Errorf("add operation error: %+v", err)
 	}
-	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
-	// TODO: InkMiner.states should be updated to have the current state too
 
 	opHash, err := req.Hash()
 	if err != nil {

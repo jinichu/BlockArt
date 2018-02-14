@@ -29,7 +29,7 @@ func isOpSigValid(operation blockartlib.Operation) error {
 	return nil
 }
 
-func validateShape(shape blockartlib.Shape) error {
+func (i *InkMiner) validateShape(shape blockartlib.Shape) error {
 	// TODO: validate the shape data
 	if shape.Svg == "" || shape.Fill == "" || shape.Stroke == "" {
 		return fmt.Errorf("one of Svg, Fill, Stroke is empty: %+v", shape)
@@ -37,17 +37,24 @@ func validateShape(shape blockartlib.Shape) error {
 	if shape.Type != blockartlib.PATH {
 		return fmt.Errorf("unknown shape type: %+v", shape.Type)
 	}
+	vertices := blockartlib.ComputeVertices(shape.Svg)
+	for _, v := range vertices {
+		if v[0] < 0 || v[0] > float64(i.settings.CanvasSettings.CanvasXMax) ||
+			v[1] < 0 || v[1] > float64(i.settings.CanvasSettings.CanvasYMax) {
+			return fmt.Errorf("svg is out of canvas bounds")
+		}
+	}
 	return nil
 }
 
-func validateOp(operation blockartlib.Operation) error {
+func (i *InkMiner) validateOp(operation blockartlib.Operation) error {
 	if err := isOpSigValid(operation); err != nil {
 		return err
 	}
 
 	switch operation.OpType {
 	case blockartlib.ADD:
-		if err := validateShape(operation.ADD.Shape); err != nil {
+		if err := i.validateShape(operation.ADD.Shape); err != nil {
 			return err
 		}
 	case blockartlib.DELETE:

@@ -295,74 +295,10 @@ func isSelfIntersecting(shapeSvgString string) bool {
 }
 
 // Calculate the ink cost to fill a shape
-func calculateFillCost(shapeSvgString string) (cost float64) {
-	i := 0
-	cost = 0.0
-	arr := strings.Fields(shapeSvgString)
-
-	var operation string
-	var current_pos []float64
-	var original_pos []float64
-	var new_pos []float64
-	var vertices [][]float64
-	var x float64
-	var y float64
-
-	for {
-		if i >= len(arr) {
-			break
-		}
-		operation = arr[i]
-
-		if operation == "M" || operation == "m" || operation == "L" || operation == "l" {
-			x = parseFloat(arr[i+1])
-			y = parseFloat(arr[i+2])
-		} else if operation == "V" || operation == "v" {
-			y = parseFloat(arr[i+1])
-		} else if operation == "H" || operation == "h" {
-			x = parseFloat(arr[i+1])
-		}
-
-		new_pos = []float64{}
-
-		switch operation {
-		case "M":
-			new_pos = []float64{x, y}
-			if original_pos == nil {
-				original_pos = new_pos
-			}
-			i += 3
-		case "m":
-			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
-			i += 3
-		case "L":
-			new_pos = []float64{x, y}
-			i += 3
-		case "l":
-			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
-			i += 3
-		case "H":
-			new_pos = []float64{x, current_pos[1]}
-			i += 2
-		case "h":
-			new_pos = []float64{x + current_pos[0], current_pos[1]}
-			i += 2
-		case "V":
-			new_pos = []float64{current_pos[0], y}
-			i += 2
-		case "v":
-			new_pos = []float64{current_pos[0], y + current_pos[1]}
-			i += 2
-		case "Z", "z":
-			new_pos = original_pos
-			i += 1
-		default:
-		}
-		current_pos = new_pos
-		vertices = append(vertices, new_pos)
-	}
-	cost = calculateArea(vertices)
-	return
+func calculateFillCost(shapeSvgString string) float64 {
+	vertices := ComputeVertices(shapeSvgString)
+	cost := calculateArea(vertices)
+	return cost
 }
 
 // Calculate the cost to draw a line
@@ -539,4 +475,73 @@ func calculateArea(vertices [][]float64) (area float64) {
 	}
 
 	return math.Abs(area) / 2
+}
+
+// Compute all the vertices of an SVG string
+func ComputeVertices(shapeSvgString string) [][]float64 {
+	i := 0
+	arr := strings.Fields(shapeSvgString)
+
+	var operation string
+	var current_pos []float64
+	var original_pos []float64
+	var new_pos []float64
+	var vertices [][]float64
+	var x float64
+	var y float64
+
+	for {
+		if i >= len(arr) {
+			break
+		}
+		operation = arr[i]
+
+		if operation == "M" || operation == "m" || operation == "L" || operation == "l" {
+			x = parseFloat(arr[i+1])
+			y = parseFloat(arr[i+2])
+		} else if operation == "V" || operation == "v" {
+			y = parseFloat(arr[i+1])
+		} else if operation == "H" || operation == "h" {
+			x = parseFloat(arr[i+1])
+		}
+
+		new_pos = []float64{}
+
+		switch operation {
+		case "M":
+			new_pos = []float64{x, y}
+			if original_pos == nil {
+				original_pos = new_pos
+			}
+			i += 3
+		case "m":
+			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+			i += 3
+		case "L":
+			new_pos = []float64{x, y}
+			i += 3
+		case "l":
+			new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+			i += 3
+		case "H":
+			new_pos = []float64{x, current_pos[1]}
+			i += 2
+		case "h":
+			new_pos = []float64{x + current_pos[0], current_pos[1]}
+			i += 2
+		case "V":
+			new_pos = []float64{current_pos[0], y}
+			i += 2
+		case "v":
+			new_pos = []float64{current_pos[0], y + current_pos[1]}
+			i += 2
+		case "Z", "z":
+			new_pos = original_pos
+			i += 1
+		default:
+		}
+		current_pos = new_pos
+		vertices = append(vertices, new_pos)
+	}
+	return vertices
 }
