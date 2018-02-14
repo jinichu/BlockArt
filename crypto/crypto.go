@@ -102,7 +102,7 @@ func UnmarshalPublic(key string) (*ecdsa.PublicKey, error) {
 func LoadPrivate(publicPath, privatePath string) (*ecdsa.PrivateKey, error) {
 
 	var publicBody, privateBody []byte
-	if _, err := os.Stat(publicPath); os.IsNotExist(err) {
+	if _, err := os.Stat(publicPath); err != nil {
 		publicBody = []byte(publicPath)
 	} else {
 		publicBody, err = ioutil.ReadFile(publicPath)
@@ -111,7 +111,7 @@ func LoadPrivate(publicPath, privatePath string) (*ecdsa.PrivateKey, error) {
 		}
 	}
 
-	if _, err := os.Stat(privatePath); os.IsNotExist(err) {
+	if _, err := os.Stat(privatePath); err != nil {
 		privateBody = []byte(privatePath)
 	} else {
 		privateBody, err = ioutil.ReadFile(privatePath)
