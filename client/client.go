@@ -21,6 +21,11 @@ func New(privKey *ecdsa.PrivateKey) (*Client, error) {
 		privKey: privKey,
 	}
 
+	c.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./client/static/"))))
+	c.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./client/static/index.html")
+	})
+
 	return c, nil
 }
 

@@ -1,0 +1,19 @@
+{
+  "name": "proj1_f5w9a_h6v9a_q7w9a_w1c0b",
+  "authors": [],
+  "description": "",
+  "main": "",
+  "license": "",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "client/static/bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "^2.5.0"
+  }
+}
