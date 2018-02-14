@@ -269,6 +269,11 @@ func (i *InkMiner) addOperation(op blockartlib.Operation) error {
 		return nil
 	}
 
+	select {
+	case i.newOpChan <- op:
+	default:
+	}
+
 	// if it's a new operation, announce it to all peers
 	return i.floodOperation(op)
 }
@@ -294,20 +299,10 @@ func (p *peer) notifyBlock(block blockartlib.Block) error {
 }
 
 func (i *InkMinerRPC) NotifyBlock(req NotifyBlockRequest, resp *NotifyBlockResponse) error {
-	// TODO: validate block
-
-	success, err := i.i.AddBlock(req.Block)
-	if err != nil {
+	if _, err := i.i.AddBlock(req.Block); err != nil {
 		return err
 	}
-
-	// If we didn't end up adding the block at all
-	if !success {
-		return nil
-	}
-
-	// if it's a new block, announce it to all peers
-	return i.i.announceBlock(req.Block)
+	return nil
 }
 
 func (i *InkMiner) removePeer(p *peer) error {
@@ -360,37 +355,29 @@ func (i *InkMiner) peerHeartBeat(p *peer) {
 
 // Helper Function: Adds block to the InkMiner
 func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	if err := i.isBlockNonceValid(block); err != nil {
+		return false, err
+	}
 
 	hash, err := block.Hash()
 	if err != nil {
 		return false, err
 	}
 
-	_, ok := i.mu.blockchain[hash]
-	if !ok {
-		// Check every block in the latest queue
-		newLatest := false
-		for _, blk := range i.latest {
-			//
-			if block.BlockNum > blk.BlockNum {
-				i.latest = append([]*blockartlib.Block{}, &block)
-				newLatest = true
-				break
-			}
-		}
-
-		// If we did not clean out the latest list at all
-		if !newLatest {
-
-		}
-		i.mu.blockchain[hash] = block
-	} else {
+	i.mu.Lock()
+	if _, ok := i.mu.blockchain[hash]; ok {
+		i.mu.Unlock()
 		return false, nil
 	}
+	i.mu.blockchain[hash] = block
+	i.mu.Unlock()
 
-	return true, nil
+	select {
+	case i.newBlockChan <- block:
+	default:
+	}
+
+	return true, i.announceBlock(block)
 }
 
 type peer struct {

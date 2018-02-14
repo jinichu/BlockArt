@@ -54,15 +54,21 @@ func validateOp(operation blockartlib.Operation) error {
 }
 
 // Returns true if this block has the correct nonce
-func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) bool {
+func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
-		return false
+		return err
 	}
-	if uint8(numZeros(blockHash)) == i.settings.PoWDifficultyOpBlock {
-		return true
+
+	want := i.settings.PoWDifficultyOpBlock
+	if len(block.Records) == 0 {
+		want = i.settings.PoWDifficultyNoOpBlock
 	}
-	return false
+	zeros := uint8(numZeros(blockHash))
+	if zeros != want {
+		return fmt.Errorf("invalid block nonce: got %d zeros, wanted %d in %q, %+v", zeros, want, blockHash, block)
+	}
+	return nil
 }
 
 // Returns true if the inkCost is valid in the given state

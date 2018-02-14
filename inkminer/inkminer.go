@@ -22,7 +22,6 @@ type InkMiner struct {
 	privKey   *ecdsa.PrivateKey // Pub/priv key pair of this InkMiner
 	publicKey string            // Public key of the Miner (Note: is this needed?)
 
-	latest      []*blockartlib.Block    // Latest blocks in the blockchain
 	settings    server.MinerNetSettings // Settings for this BlockArt network instance
 	currentHead blockartlib.Block       // Block that InkMiner is mining on (current head)
 	rs          *rpc.Server             // RPC Server
@@ -65,16 +64,6 @@ func getOutboundIP() string {
 
 	return localAddr.IP.String()
 }
-
-/*
-addr      string							// IP Address of the InkMiner
-client    *rpc.Client       				// RPC client to connect to the server
-
-latest        []*blockartlib.Block         	// Latest blocks in the blockchain
-settings      server.MinerNetSettings 		// Settings for this BlockArt network instance
-stopper       *stopper.Stopper
-
-*/
 
 func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	i := &InkMiner{

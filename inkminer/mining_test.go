@@ -55,17 +55,19 @@ func TestInkMiner_CalculateState(t *testing.T) {
 	inkMiner := generateTestInkMiner(t)
 
 	// Generate Block 1
-	block1 := blockartlib.Block{
+	block1 := inkMiner.TestMine(t, blockartlib.Block{
 		BlockNum:  1,
 		PrevBlock: inkMiner.settings.GenesisBlockHash,
 		PubKey:    inkMiner.privKey.PublicKey,
 		Nonce:     4,
-	}
+	})
 	blockHash1, err := block1.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
-	inkMiner.AddBlock(block1)
+	if _, err := inkMiner.AddBlock(block1); err != nil {
+		t.Fatal(err)
+	}
 
 	// Newer block
 	operation1 := blockartlib.Operation{
@@ -74,19 +76,21 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		Id:      10,
 		PubKey:  inkMiner.privKey.PublicKey,
 	}
-	block2 := blockartlib.Block{
+	block2 := inkMiner.TestMine(t, blockartlib.Block{
 		Records:   []blockartlib.Operation{operation1},
 		PrevBlock: blockHash1,
 		BlockNum:  2,
 		PubKey:    inkMiner.privKey.PublicKey,
 		Nonce:     15,
-	}
+	})
 	blockHash2, err := block2.Hash()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	inkMiner.AddBlock(block2)
+	if _, err := inkMiner.AddBlock(block2); err != nil {
+		t.Fatal(err)
+	}
 
 	// Calculate two blocks at once and test
 	someState, err := inkMiner.CalculateState(block2)
@@ -124,13 +128,13 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		InkCost: 5,
 		PubKey:  inkMiner.privKey.PublicKey,
 	}
-	block3 := blockartlib.Block{
+	block3 := inkMiner.TestMine(t, blockartlib.Block{
 		PrevBlock: blockHash2,
 		BlockNum:  3,
 		Records:   []blockartlib.Operation{operation2},
 		PubKey:    inkMiner.privKey.PublicKey,
 		Nonce:     22441,
-	}
+	})
 
 	block3Hash, err := block3.Hash()
 	if err != nil {
@@ -178,10 +182,23 @@ func generateTestInkMiner(t *testing.T) *InkMiner {
 			GenesisBlockHash:       "genesis!",
 			InkPerOpBlock:          20,
 			InkPerNoOpBlock:        5,
-			PoWDifficultyNoOpBlock: 1,
-			PoWDifficultyOpBlock:   2,
+			PoWDifficultyNoOpBlock: 0,
+			PoWDifficultyOpBlock:   0,
 		},
 	}
 
 	return inkMiner
+}
+
+func (i *InkMiner) TestMine(t *testing.T, block blockartlib.Block) blockartlib.Block {
+	for {
+		nonce, success, err := i.mineWorker(block, 0, 10000000000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if success {
+			block.Nonce = nonce
+			return block
+		}
+	}
 }

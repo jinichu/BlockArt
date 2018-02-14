@@ -78,15 +78,6 @@ func (i *InkMiner) GetBlock(hash string) (blockartlib.Block, bool) {
 	return b, ok
 }
 
-// Consumes an operation and attempts
-func (i *InkMiner) mineBlock(operation blockartlib.Operation) error {
-	// TODO: Jonathan - verify operation and start mining this block. Set mined block to be currentHead and create a State object
-
-	// This maybe should be structured as "daemon" ie. an infinite for loop with
-	// channels in/out so it's possible to interrupt mid block. - Tristan
-	return errors.New("unimplemented")
-}
-
 func (i *InkMiner) getStateForHash(hash string) (State, error) {
 	if hash == i.settings.GenesisBlockHash {
 		return NewState(), nil
