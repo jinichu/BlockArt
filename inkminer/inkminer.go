@@ -24,8 +24,8 @@ type InkMiner struct {
 
 	settings server.MinerNetSettings // Settings for this BlockArt network instance
 	rs       *rpc.Server             // RPC Server
-	stopper  *stopper.Stopper        // TODO: [Jonathan] Figure what this is
-	log      *log.Logger             // TODO: [Jonathan] Figure what this is
+	stopper  *stopper.Stopper
+	log      *log.Logger
 
 	// newOpChan should be used to notify the mining loop about new operations
 	newOpChan chan blockartlib.Operation
