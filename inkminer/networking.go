@@ -391,6 +391,7 @@ func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error) {
 				blockHash = currentBlock.PrevBlock
 				currentBlock = i.mu.blockchain[currentBlock.PrevBlock]
 			}
+			delete(i.mu.validateNumMap, opHash)
 			validateNumWaiter.done <- blockHash
 		}
 	}
