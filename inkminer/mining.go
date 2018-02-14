@@ -166,7 +166,6 @@ func (i *InkMiner) generateNewMiningBlockLoop(mineBlockChan chan blockartlib.Blo
 			i.log.Printf("failed to generate new mining block: %+v", err)
 			continue
 		}
-		log.Printf("generated mining block!")
 		mineBlockChan <- block
 
 		// wait for a new operation or block to come in
@@ -228,7 +227,6 @@ outer:
 		found := false
 		var err error
 		for !found {
-			i.log.Printf("mining...")
 			// attempt to mine a block for a set number of iterations
 			nonce, found, err = i.mineWorker(block, nonce, 1000)
 			if err != nil {
@@ -246,11 +244,11 @@ outer:
 			}
 		}
 
-		i.log.Printf("found block!")
 		block.Nonce = nonce
 		if _, err := i.AddBlock(block); err != nil {
 			i.log.Printf("Mining error: %+v", err)
 		}
+		i.log.Printf("generated block: %+v", block)
 	}
 }
 

@@ -52,14 +52,14 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	// TODO: InkMiner.currentHead should have the latest block. Compute hash and return this as blockHash
 	// TODO: InkMiner.states should be updated to have the current state too
 
-	block = i.i.currentHead()
-
-	blockHash, err = block.Hash()
+	opHash, err := req.Hash()
 	if err != nil {
 		return err
 	}
+	validateNum := req.ValidateNum
+	blockHash = i.i.waitForValidateNum(opHash, validateNum)
 
-	state, err = i.i.CalculateState(block)
+	state, err = i.i.CalculateState(i.i.currentHead())
 	if err != nil {
 		return err
 	}
@@ -154,4 +154,18 @@ func (i *InkMinerRPC) GetChildrenBlocks(req *string, resp *blockartlib.GetChildr
 		return nil
 	}
 	return blockartlib.InvalidBlockHashError(*req)
+}
+
+func (i *InkMiner) waitForValidateNum(opHash string, validateNum uint8) string {
+	i.mu.Lock()
+	validateNumWaiter := ValidateNumWaiter{
+		done:        make(chan string),
+		validateNum: validateNum,
+	}
+	i.mu.validateNumMap[opHash] = validateNumWaiter
+	i.mu.Unlock()
+
+	blockHash := <-validateNumWaiter.done
+
+	return blockHash
 }
