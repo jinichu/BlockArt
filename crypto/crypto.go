@@ -12,6 +12,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"os"
 )
 
 // GenerateKey generates a ECDSA public-private key pair.
@@ -99,14 +100,26 @@ func UnmarshalPublic(key string) (*ecdsa.PublicKey, error) {
 // LoadPrivate loads a public-private key from the specified public and private key
 // paths.
 func LoadPrivate(publicPath, privatePath string) (*ecdsa.PrivateKey, error) {
-	publicBody, err := ioutil.ReadFile(publicPath)
-	if err != nil {
-		return nil, err
+
+	var publicBody, privateBody []byte
+	if _, err := os.Stat(publicPath); os.IsNotExist(err) {
+		publicBody = []byte(publicPath)
+	} else {
+		publicBody, err = ioutil.ReadFile(publicPath)
+		if err != nil {
+			return nil, err
+		}
 	}
-	privateBody, err := ioutil.ReadFile(privatePath)
-	if err != nil {
-		return nil, err
+
+	if _, err := os.Stat(privatePath); os.IsNotExist(err) {
+		privateBody = []byte(privatePath)
+	} else {
+		privateBody, err = ioutil.ReadFile(privatePath)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	publicKey, err := UnmarshalPublic(string(publicBody))
 	if err != nil {
 		return nil, err
