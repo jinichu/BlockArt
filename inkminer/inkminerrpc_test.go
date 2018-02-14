@@ -148,11 +148,11 @@ func TestGetShapes(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	args := "1234"
+	args := "1234notexist"
 	var resp blockartlib.GetShapesResponse
 	err = i.GetShapes(&args, &resp)
 	if err == nil {
-		t.Fatal("This block shouldn't exist")
+		t.Fatal("This block's shapes shouldn't exist")
 	}
 	args, err = i.i.mu.currentHead.Hash()
 	if err != nil {
