@@ -1,9 +1,10 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 
 <link rel="import" href="styles.html">
 
 <dom-module id="main-app">
-	<template>
+  <template>
     <style include="styles">
       :host {
 				display: block;
@@ -25,13 +26,20 @@
     </style>
 
     <h1>BlockArt App</h1>
+    <pre>[[json(state)]]</pre>
+
+    <iron-ajax auto url="/api/state" handle-as="json" last-response="{{state}}" />
   </template>
 
   <script>
   class MainApp extends Polymer.Element {
-		static get is() { return 'main-app' }
-	}
-  customElements.define(MainApp.is, MainApp);
-	</script>
+    static get is() { return 'main-app' }
+
+    json (state) {
+      return JSON.stringify(state)
+    }
+  }
+  customElements.define(MainApp.is, MainApp)
+  </script>
 </dom-module>
 
