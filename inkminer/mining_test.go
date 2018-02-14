@@ -180,13 +180,11 @@ func generateTestInkMiner(t *testing.T) *InkMiner {
 	}
 
 	inkMiner.settings = server.MinerNetSettings{
-		MinerSettings: server.MinerSettings{
-			GenesisBlockHash:       "genesis!",
-			InkPerOpBlock:          20,
-			InkPerNoOpBlock:        5,
-			PoWDifficultyNoOpBlock: 0,
-			PoWDifficultyOpBlock:   0,
-		},
+		GenesisBlockHash:       "genesis!",
+		InkPerOpBlock:          20,
+		InkPerNoOpBlock:        5,
+		PoWDifficultyNoOpBlock: 0,
+		PoWDifficultyOpBlock:   0,
 	}
 
 	return inkMiner
