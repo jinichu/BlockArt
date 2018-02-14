@@ -149,7 +149,8 @@ func (i *InkMinerRPC) GetGenesisBlock(req *string, resp *string) error {
 }
 
 func (i *InkMinerRPC) GetChildrenBlocks(req *string, resp *blockartlib.GetChildrenResponse) error {
-	if _, ok := i.i.GetBlock(*req); ok {
+	_, ok := i.i.GetBlock(*req)
+	if ok || *req == i.i.settings.GenesisBlockHash {
 		getChildrenResponse := blockartlib.GetChildrenResponse{}
 
 		i.i.mu.Lock()
