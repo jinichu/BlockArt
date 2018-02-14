@@ -1,0 +1,45 @@
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+
+<link rel="import" href="styles.html">
+
+<dom-module id="main-app">
+  <template>
+    <style include="styles">
+      :host {
+				display: block;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 4%;
+        padding-right: 4%;
+        padding-top: 50px;
+        padding-bottom: 50px;
+				max-width: 1000px;
+
+        color: #495057;
+        font-family: -apple-system,BlinkMacSystemFont,Lato,"Segoe UI",Verdana,Arial,sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        letter-spacing: 0;
+        -webkit-text-size-adjust: none;
+      }
+    </style>
+
+    <h1>BlockArt App</h1>
+    <pre>[[json(state)]]</pre>
+
+    <iron-ajax auto url="/api/state" handle-as="json" last-response="{{state}}" />
+  </template>
+
+  <script>
+  class MainApp extends Polymer.Element {
+    static get is() { return 'main-app' }
+
+    json (state) {
+      return JSON.stringify(state)
+    }
+  }
+  customElements.define(MainApp.is, MainApp)
+  </script>
+</dom-module>
+
