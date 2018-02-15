@@ -48,7 +48,7 @@ func TestCalculateComplexPolygon2(t * testing.T) {
 }
 
 func TestCalculateComplexPolygon3(t * testing.T) {
-	testPath := "M 390 240 L 450 210 L 390 210 L 360 150 L 330 210 L 300 240 L 300 330 L 390 300 L 390 240 "
+	testPath := "M 390 240 L 450 210 L 390 210 L 360 150 L 330 210 L 300 240 L 300 330 L 390 300 L 390 240"
 	expectedResult := 11700.0
 	actualResult, _ := calculateFillCost(testPath)
 
@@ -57,10 +57,18 @@ func TestCalculateComplexPolygon3(t * testing.T) {
 	}
 }
 
-
-
 func TestSelfIntersectionFails(t * testing.T) {
   testPath := "M 400 300 L 500 450 L 400 450 L 500 350 L 400 350 L 400 300"
+  expectedResult := InvalidShapeSvgStringError(testPath)
+  actualResult, err := calculateFillCost(testPath)
+  fmt.Printf("%+v, actual result", actualResult)
+  if err != expectedResult {
+    t.Fatalf("Expected %s but got %s", expectedResult.Error(), err)
+  }
+}
+
+func TestInersectionFails2(t *testing.T) {
+  testPath := "M 400 300 L 500 250 L 650 300 L 300 350 L 500 350 L 500 300 L 400 300 "
   expectedResult := InvalidShapeSvgStringError(testPath)
   actualResult, err := calculateFillCost(testPath)
   fmt.Printf("%+v, actual result", actualResult)
@@ -275,4 +283,3 @@ func generateRandomString(n int) (res string) {
 func nilFunc() error {
 	return nil
 }
-
