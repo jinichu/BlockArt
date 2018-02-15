@@ -3,6 +3,7 @@ package client
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,7 +26,11 @@ func New(privKey *ecdsa.PrivateKey) (*Client, error) {
 	}
 
 	c.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./client/static/"))))
+
 	c.mux.HandleFunc("/api/state", c.handleState)
+	c.mux.HandleFunc("/api/add", c.handleAdd)
+	c.mux.HandleFunc("/api/delete", c.handleDelete)
+
 	c.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./client/static/index.html")
 	})
@@ -94,9 +99,23 @@ func (c *Client) GetBlockChain() (Block, error) {
 	return c.GetBlock(hash)
 }
 
+type jsonErr struct {
+	Error string
+	Stack string
+}
+
 func handleErr(w http.ResponseWriter, err error) {
 	stack := debug.Stack()
-	http.Error(w, fmt.Sprintf("%s:\n\n%s", err, stack), 500)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	if err := json.NewEncoder(w).Encode(jsonErr{
+		Error: err.Error(),
+		Stack: string(stack),
+	}); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 }
 
 func (c *Client) handleState(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +145,54 @@ func (c *Client) handleState(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		handleErr(w, err)
+		return
+	}
+}
+
+type shape struct {
+	Type   string
+	Stroke string
+	Fill   string
+	Svg    string
+}
+
+func (c *Client) handleAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		handleErr(w, errors.New("must use POST"))
+		return
+	}
+
+	var body shape
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	if body.Type != "path" {
+		handleErr(w, fmt.Errorf("Type must be path; not %q", body.Type))
+		return
+	}
+
+	if _, _, _, err := c.canvas.AddShape(1, blockartlib.PATH, body.Svg, body.Fill, body.Stroke); err != nil {
+		handleErr(w, err)
+		return
+	}
+}
+
+func (c *Client) handleDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		handleErr(w, errors.New("must use POST"))
+		return
+	}
+
+	var hash string
+	if err := json.NewDecoder(r.Body).Decode(&hash); err != nil {
+		handleErr(w, err)
+		return
+	}
+
+	if _, err := c.canvas.DeleteShape(1, hash); err != nil {
 		handleErr(w, err)
 		return
 	}

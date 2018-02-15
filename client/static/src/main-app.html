@@ -5,6 +5,10 @@
 <link rel="import" href="../bower_components/paper-item/paper-item-body.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-icons/editor-icons.html">
+<link rel="import" href="../bower_components/paper-swatch-picker/paper-swatch-picker.html">
+<link rel="import" href="../bower_components/neon-animation/web-animations.html">
+<link rel="import" href="../bower_components/paper-progress/paper-progress.html">
 
 <link rel="import" href="styles.html">
 
@@ -19,17 +23,55 @@
         letter-spacing: 0;
         -webkit-text-size-adjust: none;
 
-        display: block;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+
         padding-left: 4%;
         padding-right: 4%;
         padding-top: 50px;
         padding-bottom: 50px;
       }
 
+      paper-progress {
+        width: 100%;
+        flex-shrink: 0;
+        --paper-progress-indeterminate-cycle-duration: 5s;
+        --paper-progress-active-color: #f03e3e;
+      }
+
+      paper-progress[disabled] {
+        display: none;
+      }
+
+      svg {
+        margin: 16px;
+        @apply --paper-material-elevation-1;
+      }
+
+      svg path {
+        cursor: pointer;
+      }
+
+      [activated] {
+        color: #f03e3e;
+      }
+
+      .row {
+        display: flex;
+        overflow: hidden;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
       .column {
         margin-left: auto;
         margin-right: auto;
-        max-width: 1000px;
+        width: 900px;
+        max-width: 100%;
       }
 
       .error {
@@ -38,8 +80,8 @@
 
       #container {
         display: flex;
+        flex-grow: 1;
         overflow: hidden;
-        height: 800px;
       }
 
       #scrollContainer {
@@ -48,6 +90,7 @@
       }
 
       #canvas {
+        margin-right: 16px;
         flex-grow: 1;
         flex-shrink: 1;
         overflow: hidden;
@@ -58,6 +101,7 @@
       #canvasContainer {
         flex-grow: 1;
         overflow: auto;
+        text-align: center;
       }
 
       #blocks {
@@ -71,21 +115,68 @@
       }
     </style>
 
-    <div class="column">
+    <div>
       <h1>
-        BlockArt App
+        <div class="row">
+          <span>BlockArt App</span>
 
-        <span class="sub right">
-          Available Ink [[state.Ink]]
-          <paper-icon-button icon="refresh" on-tap="refresh"></paper-icon-button>
-        </span>
+          <span class="sub">
+            Available Ink [[state.Ink]]
+            <paper-icon-button icon="refresh" on-tap="refresh"></paper-icon-button>
+          </span>
+        </div>
       </h1>
       <pre class="error">[[err(error)]]</pre>
     </div>
 
+    <paper-progress indeterminate disabled="[[!activeRequests]]">
+    </paper-progress>
+
     <div id="container">
       <div id="canvas">
-        <h2>Canvas - Block [[selected.Hash]]</h2>
+        <div class="row">
+          <h2>Canvas - [[selected.Hash]] </h2>
+          <div class="controls">
+            <paper-icon-button
+              icon="visibility"
+              mode="select"
+              activated$="[[active(mode, 'select')]]"
+              on-tap="setMode">
+            </paper-icon-button>
+            <paper-icon-button
+              icon="create"
+              mode="create"
+              activated$="[[active(mode, 'create')]]"
+              on-tap="setMode">
+            </paper-icon-button>
+
+            <template is="dom-if" if="[[active(mode, 'create')]]">
+              Stroke
+              <paper-swatch-picker color="{{stroke}}"></paper-swatch-picker>
+              Fill
+              <paper-swatch-picker color="{{fill}}"></paper-swatch-picker>
+
+              <paper-icon-button
+                icon="editor:format-color-reset"
+                on-tap="transparentFill">
+              </paper-icon-button>
+
+              <template is="dom-if" if="[[atLeastLen(path, 2, path.*)]]">
+                <paper-icon-button
+                  icon="check"
+                  on-tap="addPath">
+                </paper-icon-button>
+              </template>
+
+              <template is="dom-if" if="[[atLeastLen(path, 1, path.*)]]">
+                <paper-icon-button
+                  icon="clear"
+                  on-tap="clearPath">
+                </paper-icon-button>
+              </template>
+            </template>
+          </div>
+        </div>
         <div id="canvasContainer"></div>
       </div>
 
@@ -96,7 +187,11 @@
             <paper-item block="[[item]]">
               <paper-item-body two-line>
                 <div>[[item.Hash]]</div>
-                <div secondary>BlockNum: [[item.BlockNum]], Shapes: [[item.NumShapes]], Children: [[item.NumChildren]]</div>
+                <div secondary>
+                  BlockNum: [[item.BlockNum]],
+                  Shapes: [[item.NumShapes]],
+                  Children: [[item.NumChildren]]
+                </div>
               </paper-item-body>
             </paper-item>
           </template>
@@ -105,29 +200,84 @@
     </div>
 
     <iron-ajax
-         id="ajax"
-         auto
-         url="/api/state"
-         handle-as="json"
-         on-response="handleState"
-         last-error="{{error}}"
-         />
+      id="ajax"
+      auto
+      url="/api/state"
+      handle-as="json"
+      on-response="handleState"
+      on-error="done"
+      last-error="{{error}}">
+    </iron-ajax>
+
+    <iron-ajax
+      id="add"
+      method="post"
+      url="/api/add"
+      handle-as="json"
+      content-type="application/json"
+      on-response="done"
+      on-error="done"
+      last-error="{{error}}">
+    </iron-ajax>
+
+    <iron-ajax
+      id="delete"
+      method="post"
+      url="/api/delete"
+      handle-as="json"
+      content-type="application/json"
+      body="[[json(selectedShape.Hash)]]"
+      on-response="done"
+      on-error="done"
+      last-error="{{error}}">
+    </iron-ajax>
   </template>
 
   <script>
   class MainApp extends Polymer.Element {
     static get is () { return 'main-app' }
 
+    static get properties () {
+      return {
+        mode: { value: 'select' },
+        stroke: { value: '#212121' },
+        fill: { value: '#039be5' },
+        path: { value: [] },
+        activeRequests: { value: 0 }
+      }
+    }
+
     static get observers () {
       return [
-        'renderCanvas(state, selected)'
+        'renderCanvas(state, selected, stroke, fill, path, path.*)'
       ]
+    }
+
+    atLeastLen (arr, len) {
+      return arr && arr.length >= len
+    }
+
+    clearPath () {
+      this.path = []
     }
 
     constructor () {
       super()
 
       this.paths = {}
+      this.start()
+    }
+
+    transparentFill () {
+      this.fill = 'transparent'
+    }
+
+    setMode (e) {
+      this.mode = e.target.getAttribute('mode')
+    }
+
+    active (a, b) {
+      return a === b
     }
 
     refresh () {
@@ -135,6 +285,8 @@
     }
 
     handleState (e, detail) {
+      this.done()
+
       const state = detail.response
       console.log(state)
 
@@ -159,10 +311,25 @@
       this.state = state
     }
 
-    renderCanvas (state, block) {
+    addPath (e) {
+      const fill = this.path.length <= 2 ? 'transparent' : this.fill
+      this.$.add.body = JSON.stringify({
+        Type: 'path',
+        Stroke: this.stroke,
+        Fill: fill,
+        Svg: this.pathSvg(this.path, fill)
+      })
+      this.$.add.generateRequest()
+      this.start()
+      this.path = []
+    }
+
+    renderCanvas (state, block, stroke, fill, path) {
       if (!state || !block) {
         return
       }
+
+      const shapes = []
       let svg = `<svg height="${state.Settings.CanvasYMax}px" width="${state.Settings.CanvasXMax}px">`
 
       function renderShape (block) {
@@ -171,14 +338,65 @@
         }
         if (block.Shapes) {
           block.Shapes.forEach(shape => {
+            shapes.push(shape)
             svg += shape.Svg
           })
         }
       }
       renderShape(block)
 
+      if (path && path.length > 0) {
+        svg += `<path d="${this.pathSvg(path, fill)}" stroke="${stroke}" fill="${fill}" />`
+      }
+
       svg += `</svg>`
       this.$.canvasContainer.innerHTML = svg
+
+      const elem = this.$.canvasContainer.children[0]
+      elem.addEventListener('click', e => {
+        if (this.mode === 'create') {
+          this.push('path', [e.layerX, e.layerY])
+        }
+      })
+
+      Array.from(elem.children).forEach((shape, i) => {
+        shape.addEventListener('click', e => {
+          this.selectedShape = shapes[i]
+
+          if (this.mode !== 'select') {
+            return
+          }
+
+          if (!confirm('Delete shape: ' + JSON.stringify(this.selectedShape))) {
+            return
+          }
+
+          this.$.delete.generateRequest()
+          this.start()
+        })
+      })
+    }
+
+    start () {
+      this.activeRequests += 1
+    }
+
+    done () {
+      this.activeRequests -= 1
+    }
+
+    pathSvg (path, fill) {
+      if (!path || path.length === 0) {
+        return ''
+      }
+      let line = 'M ' + path[0][0] + ' ' + path[0][1]
+      path.slice(1).forEach(point => {
+        line += ' L ' + point[0] + ' ' + point[1]
+      })
+      if (fill !== 'transparent' && path.length > 2) {
+        line += ' Z'
+      }
+      return line
     }
 
     flatten (block) {
@@ -195,8 +413,13 @@
         return
       }
 
-      console.error(error)
-      return error.error
+      let err = error.error
+
+      if (error.response && error.response.Error) {
+        err += ': ' + error.response.Error
+      }
+
+      return err
     }
 
     json (state) {
