@@ -37,10 +37,10 @@ func (i *InkMiner) validateShape(shape blockartlib.Shape) error {
 	if shape.Type != blockartlib.PATH {
 		return fmt.Errorf("unknown shape type: %+v", shape.Type)
 	}
-	vertices := blockartlib.ComputeVertices(shape.Svg)
-	for _, v := range vertices {
-		if v[0] < 0 || v[0] > float64(i.settings.CanvasSettings.CanvasXMax) ||
-			v[1] < 0 || v[1] > float64(i.settings.CanvasSettings.CanvasYMax) {
+	points := blockartlib.ComputeVertices(shape.Svg)
+	for j := 0; j < len(points); j++ {
+		if points[j].GetX() < 0 || points[j].GetX() > float64(i.settings.CanvasSettings.CanvasXMax) ||
+			points[j].GetY() < 0 || points[j].GetY() > float64(i.settings.CanvasSettings.CanvasYMax) {
 			return fmt.Errorf("svg is out of canvas bounds")
 		}
 	}
