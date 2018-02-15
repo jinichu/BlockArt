@@ -413,16 +413,25 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 
 		case blockartlib.DELETE:
 			shapeHash := op.DELETE.ShapeHash
-			shape, ok := createdState.shapes[shapeHash]
+			owner, ok := createdState.shapeOwners[shapeHash]
 			if !ok {
 				return State{}, fmt.Errorf("shape doesn't exist")
 			}
-			owner := createdState.shapeOwners[shapeHash]
+			shape := createdState.shapes[shapeHash]
 			if owner != pubkey {
 				return State{}, fmt.Errorf("owner != user: %q != %q", owner, pubkey)
 			}
-			delete(createdState.shapes, shapeHash)
 			delete(createdState.shapeOwners, shapeHash)
+			delete(createdState.shapes, shapeHash)
+
+			// make deleted shape white
+			if shape.Fill != "transparent" {
+				shape.Fill = "white"
+			}
+			if shape.Stroke != "transparent" {
+				shape.Stroke = "white"
+			}
+			createdState.shapes[opHash] = shape
 
 			opCost, err := shape.InkCost()
 			if err != nil {

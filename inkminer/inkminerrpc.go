@@ -73,14 +73,24 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 }
 
 func (i *InkMinerRPC) GetSvgString(req *string, resp *string) error {
-	state, err := i.i.CalculateState(i.i.currentHead())
-	if err != nil {
-		return err
+	tryBlocks := []blockartlib.Block{i.i.currentHead()}
+	i.i.mu.Lock()
+	for _, block := range i.i.mu.blockchain {
+		tryBlocks = append(tryBlocks, block)
 	}
+	i.i.mu.Unlock()
 
-	if shape, ok := state.shapes[*req]; ok {
-		*resp = shape.SvgString()
-		return nil
+	for _, block := range tryBlocks {
+		state, err := i.i.CalculateState(block)
+		if err != nil {
+			i.i.log.Printf("CalculateState error: %+v", err)
+			continue
+		}
+
+		if shape, ok := state.shapes[*req]; ok {
+			*resp = shape.SvgString()
+			return nil
+		}
 	}
 	return blockartlib.InvalidShapeHashError(*req)
 }
@@ -127,20 +137,22 @@ func (i *InkMinerRPC) GetShapes(req *string, resp *blockartlib.GetShapesResponse
 		return nil
 	}
 
-	if block, ok := i.i.GetBlock(*req); ok {
-		getShapesResponse := blockartlib.GetShapesResponse{}
-		for i := 0; i < len(block.Records); i++ {
-			op := block.Records[i]
-			hash, err := op.Hash()
-			if err != nil {
-				return err
-			}
-			getShapesResponse.ShapeHashes = append(getShapesResponse.ShapeHashes, hash)
-		}
-		*resp = getShapesResponse
-		return nil
+	block, ok := i.i.GetBlock(*req)
+	if !ok {
+		return blockartlib.InvalidBlockHashError(*req)
 	}
-	return blockartlib.InvalidBlockHashError(*req)
+
+	getShapesResponse := blockartlib.GetShapesResponse{}
+	for i := 0; i < len(block.Records); i++ {
+		op := block.Records[i]
+		hash, err := op.Hash()
+		if err != nil {
+			return err
+		}
+		getShapesResponse.ShapeHashes = append(getShapesResponse.ShapeHashes, hash)
+	}
+	*resp = getShapesResponse
+	return nil
 }
 
 func (i *InkMinerRPC) GetGenesisBlock(req *string, resp *string) error {
