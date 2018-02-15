@@ -2,6 +2,7 @@
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
 <link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-item/paper-item-body.html">
 <link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
@@ -54,8 +55,27 @@
         cursor: pointer;
       }
 
-      [activated] {
+      paper-icon-button[activated] {
         color: #f03e3e;
+      }
+
+      paper-button {
+        background-color: #e9ecef;
+      }
+
+      paper-button[activated] {
+        background-color: #f03e3e;
+        color: white;
+      }
+
+      .buttons {
+        padding: 5px 0;
+        display: flex;
+        justify-content: stretch;
+      }
+
+      paper-button {
+        flex-grow: 1;
       }
 
       .row {
@@ -177,21 +197,33 @@
             </template>
           </div>
         </div>
-        <div id="canvasContainer"></div>
+        <div id="canvasContainer">
+          <p>Pick a block from the right to get started!</p>
+        </div>
       </div>
 
       <div id="blocks">
         <h2>Blocks</h2>
         <paper-listbox id="scrollContainer" attr-for-selected="block" selected="{{selected}}">
-          <template is="dom-repeat" items="[[flatten(state.BlockChain)]]">
+          <template is="dom-repeat" items="[[flatten(state.BlockChain, paths.*)]]">
             <paper-item block="[[item]]">
               <paper-item-body two-line>
                 <div>[[item.Hash]]</div>
                 <div secondary>
                   BlockNum: [[item.BlockNum]],
-                  Shapes: [[item.NumShapes]],
-                  Children: [[item.NumChildren]]
+                  Shapes: [[item.NumShapes]]
                 </div>
+                <template is="dom-if" if="[[atLeastLen(item.Children, 2, item.Children.*)]]">
+                  <div class="buttons">
+                    <template is="dom-repeat" items="[[item.Children]]">
+                      <paper-button
+                        on-tap="pickBlock"
+                        activated$="[[activeBlock(item, paths.*)]]">
+                        [[item.NumChildren]]
+                      </paper-button>
+                    </template>
+                  </div>
+                </template>
               </paper-item-body>
             </paper-item>
           </template>
@@ -281,6 +313,7 @@
     }
 
     refresh () {
+      this.start()
       this.$.ajax.generateRequest()
     }
 
@@ -289,6 +322,18 @@
 
       const state = detail.response
       console.log(state)
+
+      /*
+      const child = {
+        Hash: "test1",
+        Children: [
+          { Hash: "child1" },
+          { Hash: "child2", Children: [{ Hash: 'grandchild1' }] }
+        ]
+      }
+      state.BlockChain.Children[0].Children.push({ Hash: 'test2' })
+      state.BlockChain.Children[0].Children.push(child)
+      */
 
       const blockchain = {}
       function index (block, blockNum, parent) {
@@ -355,7 +400,7 @@
       const elem = this.$.canvasContainer.children[0]
       elem.addEventListener('click', e => {
         if (this.mode === 'create') {
-          this.push('path', [e.layerX, e.layerY])
+          this.push('path', [e.offsetX, e.offsetY])
         }
       })
 
@@ -400,12 +445,48 @@
     }
 
     flatten (block) {
+      if (!block) {
+        return
+      }
+
       const chain = [block]
       if (block.Children) {
-        const path = this.paths[block.Hash] || 0
+      const path = this.getPath(block)
         return chain.concat(this.flatten(block.Children[path]))
       }
       return chain
+    }
+
+    pickBlock (e) {
+      const block = e.model.item
+      const parent = block.Parent
+      const index = parent.Children.indexOf(block)
+      this.paths[parent.Hash] = index
+      this.paths = JSON.parse(JSON.stringify(this.paths))
+      e.stopPropagation()
+    }
+
+    getPath (block) {
+      if (this.paths.hasOwnProperty(block.Hash)) {
+        return this.paths[block.Hash]
+      }
+      let bestPath = 0
+      let bestChildren = 0
+      if (block.Children) {
+        block.Children.forEach((child, i) => {
+          if (child.NumChildren > bestChildren) {
+            bestPath = i
+            bestChildren = child.NumChildren
+          }
+        })
+      }
+      return bestPath
+    }
+
+    activeBlock (block) {
+      const parent = block.Parent
+      const path = this.getPath(parent)
+      return parent.Children[path] === block
     }
 
     err (error) {
