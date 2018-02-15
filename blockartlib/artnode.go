@@ -2,20 +2,18 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"net/rpc"
 	"time"
 	"strings"
 	"strconv"
 	"math"
 	"fmt"
-
-	crypto "../crypto"
 )
 
 type ArtNode struct {
 	client  *rpc.Client      // RPC client to connect to the InkMiner
 	privKey ecdsa.PrivateKey // Pub/priv key pair of this ArtNode
+  minerAddr string
 }
 
 type Point struct {
@@ -35,16 +33,6 @@ type Vector struct {
 // - InvalidShapeSvgStringError
 // - ShapeSvgStringTooLongError
 func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgString string, fill string, stroke string) (shapeHash string, blockHash string, inkRemaining uint32, err error) {
-	inkCost, err := calculateInkCost(shapeSvgString, fill, stroke)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	publicKey, err := crypto.MarshalPublic(&a.privKey.PublicKey)
-	if err != nil {
-		return "", "", 0, err
-	}
-
   shape := Shape{
     Type:   shapeType,
     Svg:    shapeSvgString,
@@ -52,22 +40,10 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
     Stroke: stroke,
   }
 
-	err = svgStringValidityCheck(shapeSvgString)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	shapeHash, err = crypto.Hash(shapeSvgString)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	shapeHash, err = crypto.Hash(shape)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	id := time.Now().String()
+  err = svgStringValidityCheck(shapeSvgString)
+  if err != nil {
+    return "", "", 0, err
+  }
 
   args := Operation{
     OpType:      ADD,
@@ -78,26 +54,30 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
   }
   args.ADD.Shape = shape
 
-	bytes, err := json.Marshal(args)
-	if err != nil {
-		return "", "", 0, err
-	}
+  args, err = args.Sign(a.privKey)
+  if err != nil {
+    return "", "", 0, fmt.Errorf("signing error: %+v", err)
+  }
 
-	r, s, err := crypto.Sign(bytes, a.privKey)
-	if err != nil {
-		return "", "", 0, err
-	}
+  shapeHash, err = args.Hash()
+  if err != nil {
+    return "", "", 0, err
+  }
 
-	args.OpSig = OpSig{r, s}
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return "", "", 0, DisconnectedError(a.minerAddr)
+  }
 
-	var resp AddShapeResponse
-	err = a.client.Call("InkMinerRPC.AddShape", args, &resp)
+  var resp AddShapeResponse
+  if err = a.client.Call("InkMinerRPC.AddShape", args, &resp); err != nil {
+    return "", "", 0, err
+  }
 
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	return shapeHash, resp.BlockHash, resp.InkRemaining, nil
+  return shapeHash, resp.BlockHash, resp.InkRemaining, nil
 }
 
 // Returns the encoding of the shape as an svg string.
@@ -105,30 +85,45 @@ func (a *ArtNode) AddShape(validateNum uint8, shapeType ShapeType, shapeSvgStrin
 // - DisconnectedError
 // - InvalidShapeHashError
 func (a *ArtNode) GetSvgString(shapeHash string) (svgString string, err error) {
-	var resp string
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return "", DisconnectedError(a.minerAddr)
+  }
 
-	err = a.client.Call("InkMinerRPC.GetSvgString", shapeHash, &resp)
-	if err != nil {
-		return "", err
-	}
+  var resp string
 
-	svgString = resp
-	return
+  err = a.client.Call("InkMinerRPC.GetSvgString", shapeHash, &resp)
+  if err != nil {
+    return "", err
+  }
+
+  svgString = resp
+  return
 }
 
 // Returns the amount of ink currently available.
 // Can return the following errors:
 // - DisconnectedError
 func (a *ArtNode) GetInk() (inkRemaining uint32, err error) {
-	var resp uint32
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return 0, DisconnectedError(a.minerAddr)
+  }
 
-	err = a.client.Call("InkMinerRPC.GetInk", "", &resp)
-	if err != nil {
-		return 0, err
-	}
+  var resp uint32
 
-	inkRemaining = resp
-	return
+  err = a.client.Call("InkMinerRPC.GetInk", "", &resp)
+  if err != nil {
+    return 0, err
+  }
+
+  return resp, nil
 }
 
 // Removes a shape from the canvas.
@@ -175,30 +170,46 @@ func (a *ArtNode) DeleteShape(validateNum uint8, shapeHash string) (inkRemaining
 // - DisconnectedError
 // - InvalidBlockHashError
 func (a *ArtNode) GetShapes(blockHash string) (shapeHashes []string, err error) {
-	var resp GetShapesResponse
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return nil, DisconnectedError(a.minerAddr)
+  }
 
-	err = a.client.Call("InkMinerRPC.GetShapes", blockHash, &resp)
-	if err != nil {
-		return nil, err
-	}
+  var resp GetShapesResponse
 
-	shapeHashes = resp.ShapeHashes
-	return
+  err = a.client.Call("InkMinerRPC.GetShapes", blockHash, &resp)
+  if err != nil {
+    return nil, err
+  }
+
+  shapeHashes = resp.ShapeHashes
+  return
 }
 
 // Returns the block hash of the genesis block.
 // Can return the following errors:
 // - DisconnectedError
 func (a *ArtNode) GetGenesisBlock() (blockHash string, err error) {
-	var resp string
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return "", DisconnectedError(a.minerAddr)
+  }
 
-	err = a.client.Call("InkMinerRPC.GetGenesisBlock", "", &resp)
-	if err != nil {
-		return "", err
-	}
+  var resp string
 
-	blockHash = resp
-	return
+  err = a.client.Call("InkMinerRPC.GetGenesisBlock", "", &resp)
+  if err != nil {
+    return "", err
+  }
+
+  blockHash = resp
+  return
 }
 
 // Retrieves the children blocks of the block identified by blockHash.
@@ -206,29 +217,48 @@ func (a *ArtNode) GetGenesisBlock() (blockHash string, err error) {
 // - DisconnectedError
 // - InvalidBlockHashError
 func (a *ArtNode) GetChildren(blockHash string) (blockHashes []string, err error) {
-	var resp GetChildrenResponse
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return nil, DisconnectedError(a.minerAddr)
+  }
 
-	err = a.client.Call("InkMinerRPC.GetChildrenBlocks", blockHash, &resp)
-	if err != nil {
-		return nil, err
-	}
+  var resp GetChildrenResponse
 
-	blockHashes = resp.BlockHashes
-	return
+  err = a.client.Call("InkMinerRPC.GetChildrenBlocks", blockHash, &resp)
+  if err != nil {
+    return nil, err
+  }
+
+  blockHashes = resp.BlockHashes
+  return
 }
 
 // Closes the canvas/connection to the BlockArt network.
 // - DisconnectedError
 func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
-	var resp uint32
+  // Simple RPC call to check if we can reach the InkMiner
+  var req string
+  var success bool
+  err = a.client.Call("InkMinerRPC.TestConnection", req, &success)
+  if err != nil {
+    return 0, DisconnectedError(a.minerAddr)
+  }
 
-	err = a.client.Call("InkMinerRPC.GetInk", "", &resp)
-	if err != nil {
-		return 0, err
-	}
+  var resp uint32
 
-	inkRemaining = resp
-	return
+  err = a.client.Call("InkMinerRPC.GetInk", "", &resp)
+  if err != nil {
+    return 0, err
+  }
+
+  if err := a.client.Close(); err != nil {
+    return 0, err
+  }
+
+  return resp, nil
 }
 
 // HELPERS
@@ -626,5 +656,92 @@ func calculateArea(vertices []Point) (area float64) {
 	}
 
 	return math.Abs(area) / 2
+}
+
+
+// Compute all the vertices of an SVG string
+func ComputeVertices(shapeSvgString string) [][]float64 {
+  i := 0
+  arr := strings.Fields(shapeSvgString)
+
+  var operation string
+  var current_pos []float64
+  var original_pos []float64
+  var new_pos []float64
+  var vertices [][]float64
+  var x float64
+  var y float64
+
+  for {
+    if i >= len(arr) {
+      break
+    }
+    operation = arr[i]
+
+    if operation == "M" || operation == "m" || operation == "L" || operation == "l" {
+      x = parseFloat(arr[i+1])
+      y = parseFloat(arr[i+2])
+    } else if operation == "V" || operation == "v" {
+      y = parseFloat(arr[i+1])
+    } else if operation == "H" || operation == "h" {
+      x = parseFloat(arr[i+1])
+    }
+
+    new_pos = []float64{}
+
+    switch operation {
+    case "M":
+      new_pos = []float64{x, y}
+      if original_pos == nil {
+        original_pos = new_pos
+      }
+      i += 3
+    case "m":
+      new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+      i += 3
+    case "L":
+      new_pos = []float64{x, y}
+      i += 3
+    case "l":
+      new_pos = []float64{x + current_pos[0], y + current_pos[1]}
+      i += 3
+    case "H":
+      new_pos = []float64{x, current_pos[1]}
+      i += 2
+    case "h":
+      new_pos = []float64{x + current_pos[0], current_pos[1]}
+      i += 2
+    case "V":
+      new_pos = []float64{current_pos[0], y}
+      i += 2
+    case "v":
+      new_pos = []float64{current_pos[0], y + current_pos[1]}
+      i += 2
+    case "Z", "z":
+      new_pos = original_pos
+      i += 1
+    default:
+    }
+    current_pos = new_pos
+    vertices = append(vertices, new_pos)
+  }
+  return vertices
+}
+
+// Gets the ink cost of a particular operation
+// Can return the following errors:
+// -InvalidShapeSvgStringError
+func (sh Shape) InkCost() (cost uint32, err error) {
+  var fcost float64
+  if sh.Fill == "transparent" {
+    fcost = calculateLineCost(sh.Svg)
+  } else {
+    fcost, err = calculateFillCost(sh.Svg)
+    if err != nil {
+      return 0, err
+    }
+  }
+
+  return uint32(fcost), nil
 }
 
