@@ -263,23 +263,6 @@ func (a *ArtNode) CloseCanvas() (inkRemaining uint32, err error) {
 
 // HELPERS
 
-// Gets the ink cost of a particular operation
-// Can return the following errors:
-// -InvalidShapeSvgStringError
-func calculateInkCost(shapeSvgString string, fill string, stroke string) (cost uint32, err error) {
-	var floatCost float64
-	if fill == "transparent" {
-		floatCost = calculateLineCost(shapeSvgString)
-	} else {
-		floatCost, err = calculateFillCost(shapeSvgString)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	return uint32(floatCost), nil
-}
-
 // Check if the svg string is a closed-form shape
 func isClosed(operation string, original_pos Point, current_pos Point) bool {
 	isClosed := false
@@ -293,29 +276,6 @@ func isClosed(operation string, original_pos Point, current_pos Point) bool {
 	}
 
 	return isClosed
-}
-
-func onSegment(p Point, q Point, r Point) bool {
-	if q.x <= math.Max(p.x, r.x) && q.x >= math.Min(p.x, r.x) &&
-		q.y <= math.Max(p.y, r.y) && q.y >= math.Min(p.y, r.y) {
-
-		return true
-	}
-
-	return false
-}
-
-func orientation(p Point, q Point, r Point) int {
-	val := (q.y+1-p.y)*(r.x+1-q.x) - (q.x+1-p.x)*(r.y+1-q.y)
-	if val == 0 {
-		return 0
-	}
-
-	if val > 0 {
-		return 1
-	} else {
-		return 2
-	}
 }
 
 func isEqual(point0 Point, point1 Point) bool {
@@ -332,47 +292,25 @@ func isEqual(point0 Point, point1 Point) bool {
 
 // Check if the svg string is self intersecting
 func isSelfIntersecting(vectors []Vector) bool {
-	for index, vector := range vectors {
-		if index > 2 {
-			var other_vectors []Vector
-			other_vectors = vectors[:index]
+  for index, vector := range(vectors) {
+    if (index > 2) {
+	other_vectors := vectors[:index]
 
-			for _, other_vector := range other_vectors {
-				p1 := vector.point0
-				q1 := vector.point1
-				p2 := other_vector.point0
-				q2 := other_vector.point1
-				o1 := orientation(p1, q1, p2)
-				o2 := orientation(p1, q1, q2)
-				o3 := orientation(p2, q2, p1)
-				o4 := orientation(p2, q2, q1)
+	for _, other_vector := range(other_vectors) {
+	  v_point0 := vector.point0
+	  v_point1 := vector.point1
+	  ov_point0 := other_vector.point0
+	  ov_point1 := other_vector.point1
 
-				if !isEqual(p1, q2) && !isEqual(p2, q1) {
-
-					if o1 != o2 && o3 != o4 {
-						return true
-					}
-
-					if o1 == 0 && onSegment(p1, p2, q1) {
-						return true
-					}
-
-					if o2 == 0 && onSegment(p1, q2, q1) {
-						return true
-					}
-
-					if o3 == 0 && onSegment(p2, p1, q2) {
-						return true
-					}
-
-					if o4 == 0 && onSegment(p2, q1, q2) {
-						return true
-					}
-				}
-			}
-		}
+	  if (!isEqual(v_point0, ov_point1) && !isEqual(ov_point0, v_point1)) {
+	    if (isIntersecting(vector, other_vector) == true) {
+		return true
+	    }
+	  }
 	}
-	return false
+    }
+  }
+  return false
 }
 
 // Calculate the ink cost to fill a shape
@@ -445,22 +383,7 @@ func calculateFillCost(shapeSvgString string) (cost float64, err error) {
 		return 0, InvalidShapeSvgStringError(shapeSvgString)
 	}
 
-	// check to see if shape is self intersecting
-	j := 0
-
-	fmt.Printf("VERTICES: %+v\n", vertices)
-
-	for {
-		if j+1 >= len(vertices) {
-			break
-		} else {
-			point0 := vertices[j]
-			point1 := vertices[j+1]
-			vector := Vector{point0: point0, point1: point1}
-			vectors = append(vectors, vector)
-			j += 1
-		}
-	}
+  vectors = computeVectors(vertices)
 
 	if isSelfIntersecting(vectors) == true {
 		return 0, InvalidShapeSvgStringError(shapeSvgString)
@@ -469,6 +392,24 @@ func calculateFillCost(shapeSvgString string) (cost float64, err error) {
 	cost = calculateArea(vertices)
 	err = nil
 	return
+}
+
+func computeVectors(vertices []Point) []Vector {
+  var vectors []Vector
+  j := 0
+
+  for {
+    if j+1 >= len(vertices) {
+	break
+    } else {
+	point0 := vertices[j]
+	point1 := vertices[j+1]
+	vector := Vector{point0: point0, point1: point1}
+	vectors = append(vectors, vector)
+	j += 1
+    }
+  }
+  return vectors
 }
 
 // Calculate the cost to draw a line
@@ -723,17 +664,29 @@ func ComputeVertices(shapeSvgString string) []Point {
 // Can return the following errors:
 // -InvalidShapeSvgStringError
 func (sh Shape) InkCost() (cost uint32, err error) {
-	var fcost float64
-	if sh.Fill == "transparent" {
-		fcost = calculateLineCost(sh.Svg)
-	} else {
-		fcost, err = calculateFillCost(sh.Svg)
-		if err != nil {
-			return 0, err
-		}
+	lineCost := calculateLineCost(sh.Svg)
+
+	if sh.Fill == "transparent" && sh.Stroke == "transparent" {
+		return 0, InvalidShapeSvgStringError(sh.Svg)
 	}
 
-	return uint32(fcost), nil
+	if sh.Fill == "transparent" && sh.Stroke != "transparent" {
+		return uint32(lineCost), nil
+	}
+
+	fillCost, err := calculateFillCost(sh.Svg)
+	if err != nil {
+		return 0, err
+	}
+
+	if sh.Stroke != "transparent" {
+		return uint32(fillCost + lineCost), nil
+	}
+
+	if sh.Stroke == "transparent" {
+		return uint32(fillCost), nil
+	}
+	return
 }
 
 func (p *Point) GetX() float64 {
@@ -742,4 +695,112 @@ func (p *Point) GetX() float64 {
 
 func (p *Point) GetY() float64 {
 	return p.y
+}
+
+func isIntersecting(vector0 Vector, vector1 Vector) bool {
+	v_point0 := vector0.point0
+	v_point1 := vector0.point1
+	ov_point0 := vector1.point0
+	ov_point1 := vector1.point1
+	o1 := direction(vector0, ov_point0);
+	o2 := direction(vector0, ov_point1);
+	o3 := direction(vector1, v_point0);
+	o4 := direction(vector1, v_point1);
+
+	if (o1 != o2 && o3 != o4) {
+		return true
+	}
+
+	if (o1 == 0 && onSegment(vector0, ov_point0)) {
+		return true
+	}
+
+	if (o2 == 0 && onSegment(vector0, ov_point1)) {
+		return true
+	}
+
+	if (o3 == 0 && onSegment(vector1, v_point0)) {
+		return true
+	}
+
+	if (o4 == 0 && onSegment(vector1, v_point1)) {
+		return true
+	}
+	return false
+}
+
+func onSegment(vector Vector, q Point) bool {
+	p := vector.point0
+	r := vector.point1
+	if q.x <= math.Max(p.x, r.x) && q.x >= math.Min(p.x, r.x) && q.y <= math.Max(p.y, r.y) && q.y >= math.Min(p.y, r.y) {
+		return true
+	}
+	return false
+}
+
+func direction(vector Vector, r Point) int {
+	p := vector.point0
+	q := vector.point1
+	val := (q.y + 1 - p.y) * (r.x + 1 - q.x) - (q.x + 1 - p.x) * (r.y + 1 - q.y)
+
+	if (val == 0 ){
+		return 0
+	} else if val > 0 {
+		return 1
+	} else {
+		return 2
+	}
+}
+
+
+func pointInPolygon(vectors []Vector, point Point) bool {
+	touches := 0
+	i := 0
+
+	for {
+		if i >= len(vectors) {
+			break
+		}
+		vectorB := Vector{point, Point{point.x, math.Inf(1)}}
+		if (isIntersecting(vectors[i], vectorB)) {
+			vectorC := Vector{vectors[i].point0, point}
+			if (direction(vectorC, vectors[i].point1) == 0) {
+				return onSegment(vectors[i], point);
+			} else {
+				touches += 1
+			}
+		}
+		i += 1
+	}
+	return touches % 2 == 1;
+}
+
+//Check to see if two shapes overlap
+func shapesOverlap(svgString0 string, svgString1 string, isFilled bool) bool {
+	vectors0 := computeVectors(ComputeVertices(svgString0))
+	vectors1 := computeVectors(ComputeVertices(svgString1))
+
+	for _, vector0 := range(vectors0) {
+		for _, vector1 := range(vectors1) {
+			if (isIntersecting(vector0, vector1) == true) {
+			  return true
+			}
+		}
+	}
+
+	//if isFilled == true, check if one is perfectly inside another
+	if isFilled == true {
+		for _, vector0 := range(vectors0) {
+			if (pointInPolygon(vectors1, vector0.point0) || pointInPolygon(vectors1, vector0.point1)) {
+			  return true
+			}
+		}
+
+		for _, vector1 := range(vectors1) {
+			if (pointInPolygon(vectors0, vector1.point0) || pointInPolygon(vectors0, vector1.point1)) {
+			  return true
+			}
+		}
+	}
+	return false
 }
