@@ -2,9 +2,9 @@ package inkminer
 
 import (
 	"errors"
-	"log"
 	"net"
 	"net/rpc"
+	"sort"
 	"time"
 
 	blockartlib "../blockartlib"
@@ -49,7 +49,7 @@ func (i *InkMiner) peerDiscover() error {
 
 	var resp []net.Addr
 	if err := i.client.Call("RServer.GetNodes", i.privKey.PublicKey, &resp); err != nil {
-		log.Printf("GetNodes failed: %s", err)
+		i.log.Printf("GetNodes failed: %s", err)
 		return err
 	}
 
@@ -152,6 +152,8 @@ func (i *InkMinerRPC) Hello(req HelloRequest, resp *HelloResponse) error {
 
 	// send all blocks the client doesn't have
 	go func() {
+		depths := map[string]int{}
+
 		var toSend []string
 		i.i.mu.Lock()
 		for hash := range i.i.mu.blockchain {
@@ -159,20 +161,28 @@ func (i *InkMinerRPC) Hello(req HelloRequest, resp *HelloResponse) error {
 				continue
 			}
 
+			// build up the depths of all the blocks so we can send them in order
+			if _, err := i.i.blockDepthLocked(hash, depths); err != nil {
+				i.i.log.Printf("blockDepthLocked err: %+v", err)
+				continue
+			}
+
 			toSend = append(toSend, hash)
 		}
 		i.i.mu.Unlock()
 
+		sort.Slice(toSend, func(i, j int) bool {
+			return depths[toSend[i]] < depths[toSend[j]]
+		})
+
 		for _, hash := range toSend {
-			i.i.mu.Lock()
-			block, ok := i.i.mu.blockchain[hash]
-			i.i.mu.Unlock()
+			block, ok := i.i.GetBlock(hash)
 			if !ok {
 				continue
 			}
 
 			if err := p.notifyBlock(block); err != nil {
-				log.Printf("failed to send block to new client: %s", err)
+				i.i.log.Printf("failed to send block to new client: %s", err)
 			}
 		}
 	}()
@@ -332,7 +342,6 @@ func (i *InkMiner) peerHeartBeat(p *peer) {
 		case <-ticker.C:
 		}
 
-		i.log.Printf("sending heartbeat to: %s", p)
 		var resp struct{}
 		call := p.rpc.Go("InkMinerRPC.HeartBeat", struct{}{}, &resp, nil)
 
@@ -345,7 +354,6 @@ func (i *InkMiner) peerHeartBeat(p *peer) {
 				remove()
 				return
 			}
-			i.log.Printf("got heartbeat from: %s", p)
 		case <-time.After(timeout):
 			remove()
 			return
@@ -379,7 +387,7 @@ func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error) {
 
 	state, err := i.CalculateState(block)
 	if err != nil {
-		log.Printf("got possibly invalid block, orphaned/out of order?: %+v: %+v", block, err)
+		i.log.Printf("got possibly invalid block, orphaned/out of order?: %+v: %+v", block, err)
 	} else {
 		i.mu.Lock()
 		for opHash, validateNumWaiter := range i.mu.validateNumMap {

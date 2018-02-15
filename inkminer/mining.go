@@ -3,13 +3,17 @@ package inkminer
 import (
 	"errors"
 	"fmt"
-	"log"
+	"math/rand"
 	"testing"
 	"time"
 
 	"../blockartlib"
 	"../crypto"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 // BlockDepth returns the block depth for the given hash. It also memoizes the
 // depths into the provided map for performance with repeated calls.
@@ -129,7 +133,7 @@ func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
 
 		block.Records = append(block.Records, op)
 		if _, err := i.TransformState(state, block); err != nil {
-			log.Printf("op can't be applied to block: %+v, %+v", op, err)
+			i.log.Printf("op can't be applied to block: %+v, %+v", op, err)
 			block.Records = block.Records[:len(block.Records)-1]
 		}
 	}
@@ -141,6 +145,7 @@ var TestBlockDelay time.Duration
 
 func (i *InkMiner) generateNewMiningBlockLoop(mineBlockChan chan blockartlib.Block) {
 	for {
+		start := time.Now()
 		i.log.Printf("block generate loop")
 
 		// For testing purposes to limit computational cost of block mining.
@@ -166,6 +171,7 @@ func (i *InkMiner) generateNewMiningBlockLoop(mineBlockChan chan blockartlib.Blo
 			i.log.Printf("failed to generate new mining block: %+v", err)
 			continue
 		}
+		i.log.Printf("generated block, took %s", time.Since(start))
 		mineBlockChan <- block
 
 		// wait for a new operation or block to come in
@@ -180,7 +186,7 @@ func (i *InkMiner) generateNewMiningBlockLoop(mineBlockChan chan blockartlib.Blo
 
 // startMining should only ever be called once.
 func (i *InkMiner) startMining() error {
-	mineBlockChan := make(chan blockartlib.Block)
+	mineBlockChan := make(chan blockartlib.Block, 1)
 
 	go i.generateNewMiningBlockLoop(mineBlockChan)
 	go i.minerLoop(mineBlockChan)
@@ -220,17 +226,20 @@ func numZeros(str string) int {
 }
 
 func (i *InkMiner) minerLoop(blocks <-chan blockartlib.Block) {
+	block := <-blocks // Grab a block from the channel
 outer:
 	for {
-		block := <-blocks  // Grab a block from the channel
-		nonce := uint32(0) //
+		i.log.Printf("mining block...")
+		start := time.Now()
+
+		nonce := uint32(rand.Int31())
 		found := false
 		var err error
 		for !found {
 			// attempt to mine a block for a set number of iterations
 			nonce, found, err = i.mineWorker(block, nonce, 1000)
 			if err != nil {
-				log.Printf("Mining error: %+v", err)
+				i.log.Printf("Mining error: %+v", err)
 				continue outer
 			}
 
@@ -245,10 +254,16 @@ outer:
 		}
 
 		block.Nonce = nonce
+		i.log.Printf("AddBlock...")
 		if _, err := i.AddBlock(block); err != nil {
 			i.log.Printf("Mining error: %+v", err)
+		} else {
+			i.log.Printf("block mined: %+v", block)
 		}
-		i.log.Printf("generated block: %+v", block)
+
+		i.log.Printf("block mined. took %s", time.Since(start))
+
+		block = <-blocks
 	}
 }
 

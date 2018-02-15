@@ -6,14 +6,22 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/x509"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"os"
 )
+
+func init() {
+	gob.Register(&net.TCPAddr{})
+	gob.Register(&elliptic.CurveParams{})
+	gob.Register(elliptic.P256())
+}
 
 // GenerateKey generates a ECDSA public-private key pair.
 func GenerateKey() (*ecdsa.PrivateKey, error) {
