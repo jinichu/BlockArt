@@ -164,7 +164,8 @@ func (i *InkMinerRPC) Hello(req HelloRequest, resp *HelloResponse) error {
 			// build up the depths of all the blocks so we can send them in order
 			if _, err := i.i.blockDepthLocked(hash, depths); err != nil {
 				i.i.log.Printf("blockDepthLocked err: %+v", err)
-				continue
+				// send any blocks without a proper chain last
+				depths[hash] = len(i.i.mu.blockchain)
 			}
 
 			toSend = append(toSend, hash)

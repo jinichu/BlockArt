@@ -9,8 +9,13 @@ import (
 )
 
 func setup() (inkMinerRPC InkMinerRPC, err error) {
-	inkMiner := &InkMiner{
-		publicKey: "public",
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return InkMinerRPC{}, err
+	}
+	inkMiner, err := New(key)
+	if err != nil {
+		return InkMinerRPC{}, err
 	}
 	inkMiner.mu.states = make(map[string]State)
 
@@ -77,7 +82,7 @@ func setup() (inkMinerRPC InkMinerRPC, err error) {
 	block3Hash, err := block3.Hash()
 
 	state3.shapes[shapeHash] = shape
-	state3.inkLevels["public"] = 50
+	state3.inkLevels[inkMiner.publicKey] = 50
 
 	block4 := blockartlib.Block{
 		PrevBlock: block2Hash,
