@@ -1,5 +1,10 @@
 <link rel="import" href="../bower_components/polymer/polymer-element.html">
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-item/paper-item-body.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 
 <link rel="import" href="styles.html">
 
@@ -7,44 +12,183 @@
   <template>
     <style include="styles">
       :host {
-				display: block;
-        margin-left: auto;
-        margin-right: auto;
-        padding-left: 4%;
-        padding-right: 4%;
-        padding-top: 50px;
-        padding-bottom: 50px;
-				max-width: 1000px;
-
         color: #495057;
         font-family: -apple-system,BlinkMacSystemFont,Lato,"Segoe UI",Verdana,Arial,sans-serif;
         font-size: 14px;
         line-height: 1.5;
         letter-spacing: 0;
         -webkit-text-size-adjust: none;
+
+        display: block;
+        padding-left: 4%;
+        padding-right: 4%;
+        padding-top: 50px;
+        padding-bottom: 50px;
+      }
+
+      .column {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 1000px;
       }
 
       .error {
         color: #f03e3e;
       }
+
+      #container {
+        display: flex;
+        overflow: hidden;
+        height: 800px;
+      }
+
+      #scrollContainer {
+        overflow: auto;
+        flex-grow: 1;
+      }
+
+      #canvas {
+        flex-grow: 1;
+        flex-shrink: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #canvasContainer {
+        flex-grow: 1;
+        overflow: auto;
+      }
+
+      #blocks {
+        display: flex;
+        flex-direction: column;
+        width: 320px;
+      }
+
+      paper-item {
+        cursor: pointer;
+      }
     </style>
 
-    <h1>BlockArt App</h1>
-    <pre class="error">[[err(error)]]</pre>
-    <pre>[[json(state)]]</pre>
+    <div class="column">
+      <h1>
+        BlockArt App
+
+        <span class="sub right">
+          Available Ink [[state.Ink]]
+          <paper-icon-button icon="refresh" on-tap="refresh"></paper-icon-button>
+        </span>
+      </h1>
+      <pre class="error">[[err(error)]]</pre>
+    </div>
+
+    <div id="container">
+      <div id="canvas">
+        <h2>Canvas - Block [[selected.Hash]]</h2>
+        <div id="canvasContainer"></div>
+      </div>
+
+      <div id="blocks">
+        <h2>Blocks</h2>
+        <paper-listbox id="scrollContainer" attr-for-selected="block" selected="{{selected}}">
+          <template is="dom-repeat" items="[[flatten(state.BlockChain)]]">
+            <paper-item block="[[item]]">
+              <paper-item-body two-line>
+                <div>[[item.Hash]]</div>
+                <div secondary>BlockNum: [[item.BlockNum]], Shapes: [[item.NumShapes]], Children: [[item.NumChildren]]</div>
+              </paper-item-body>
+            </paper-item>
+          </template>
+        </paper-listbox>
+      </div>
+    </div>
 
     <iron-ajax
+         id="ajax"
          auto
          url="/api/state"
          handle-as="json"
-         last-response="{{state}}"
+         on-response="handleState"
          last-error="{{error}}"
          />
   </template>
 
   <script>
   class MainApp extends Polymer.Element {
-    static get is() { return 'main-app' }
+    static get is () { return 'main-app' }
+
+    static get observers () {
+      return [
+        'renderCanvas(state, selected)'
+      ]
+    }
+
+    constructor () {
+      super()
+
+      this.paths = {}
+    }
+
+    refresh () {
+      this.$.ajax.generateRequest()
+    }
+
+    handleState (e, detail) {
+      const state = detail.response
+      console.log(state)
+
+      const blockchain = {}
+      function index (block, blockNum, parent) {
+        let children = 0
+        if (block.Children) {
+          block.Children.forEach((child) => {
+            children += 1 + index(child, blockNum + 1, block)
+          })
+        }
+        block.Parent = parent
+        block.NumChildren = children
+        block.BlockNum = blockNum
+        block.NumShapes = block.Shapes ? block.Shapes.length : 0
+        blockchain[block.Hash] = block
+        return children
+      }
+      index(state.BlockChain, 0, null)
+
+      this.blockchain = blockchain
+      this.state = state
+    }
+
+    renderCanvas (state, block) {
+      if (!state || !block) {
+        return
+      }
+      let svg = `<svg height="${state.Settings.CanvasYMax}px" width="${state.Settings.CanvasXMax}px">`
+
+      function renderShape (block) {
+        if (block.Parent) {
+          renderShape(block.Parent)
+        }
+        if (block.Shapes) {
+          block.Shapes.forEach(shape => {
+            svg += shape.Svg
+          })
+        }
+      }
+      renderShape(block)
+
+      svg += `</svg>`
+      this.$.canvasContainer.innerHTML = svg
+    }
+
+    flatten (block) {
+      const chain = [block]
+      if (block.Children) {
+        const path = this.paths[block.Hash] || 0
+        return chain.concat(this.flatten(block.Children[path]))
+      }
+      return chain
+    }
 
     err (error) {
       if (!error) {

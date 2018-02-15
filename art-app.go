@@ -12,20 +12,24 @@ package main
 // Expects blockartlib.go to be in the ./blockartlib/ dir, relative to
 // this art-app.go file
 import (
+	"flag"
 	"log"
 
 	"./blockartlib"
 	"./crypto"
 )
 
+var minerAddr = flag.String("miner", "127.0.0.1:8080", "the address of the miner to connect to")
+
 func main() {
+	flag.Parse()
+
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func run() error {
-	minerAddr := "127.0.0.1:8080"
 	privKey, err := crypto.LoadPrivate(
 		"testkeys/test1-public.key", "testkeys/test1-private.key",
 	)
@@ -34,24 +38,30 @@ func run() error {
 	}
 
 	// Open a canvas.
-	canvas, settings, err := blockartlib.OpenCanvas(minerAddr, *privKey)
+	canvas, settings, err := blockartlib.OpenCanvas(*minerAddr, *privKey)
 	if err != nil {
 		return err
 	}
 
 	validateNum := uint8(2)
 
-	// Add a line.
-	shapeHash, blockHash, ink, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 0 0 L 0 5", "transparent", "red")
+	log.Printf("add line")
+
+	// Add a square.
+	shapeHash, blockHash, ink, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 100 100 L 200 100 L 200 110 L 100 110 Z", "blue", "red")
 	if err != nil {
 		return err
 	}
 
+	log.Printf("add line2")
+
 	// Add another line.
-	shapeHash2, blockHash2, ink2, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 0 0 L 5 0", "transparent", "blue")
+	shapeHash2, blockHash2, ink2, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 100 120 L 200 120", "transparent", "blue")
 	if err != nil {
 		return err
 	}
+
+	log.Printf("delete shape")
 
 	// Delete the first line.
 	ink3, err := canvas.DeleteShape(validateNum, shapeHash)

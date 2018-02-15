@@ -2,6 +2,8 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"encoding/gob"
 	"fmt"
 	"math"
 	"net/rpc"
@@ -9,6 +11,10 @@ import (
 	"strings"
 	"time"
 )
+
+func init() {
+	gob.Register(elliptic.P256())
+}
 
 type ArtNode struct {
 	client    *rpc.Client      // RPC client to connect to the InkMiner

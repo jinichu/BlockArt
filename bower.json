@@ -15,6 +15,10 @@
   ],
   "dependencies": {
     "polymer": "^2.5.0",
-    "iron-ajax": "^2.1.1"
+    "iron-ajax": "^2.1.1",
+    "paper-item": "^2.0.0",
+    "paper-listbox": "^2.0.0",
+    "paper-icon-button": "^2.1.0",
+    "iron-icons": "^2.0.1"
   }
 }
