@@ -85,16 +85,3 @@ func (i *InkMiner) isBlockNonceValid(block blockartlib.Block) error {
 	}
 	return nil
 }
-
-// Returns true if the inkCost is valid in the given state
-// !!!
-func (i *InkMiner) isInkCostValid(inkCost int, pubKey string, state State) bool {
-	return state.inkLevels[pubKey] > uint32(inkCost)
-}
-
-// Returns true if the given shape is valid to add in the state (does not conflict with something else)
-// TODO: Complete this
-// !!!
-func (i *InkMiner) canAddShape(shape blockartlib.Shape, pubKey string) bool {
-	return false // stub
-}
