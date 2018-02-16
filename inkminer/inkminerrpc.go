@@ -25,31 +25,37 @@ func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp
 	return nil
 }
 
-func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
-	block := i.i.currentHead()
+func (i *InkMiner) testOperation(op blockartlib.Operation) error {
+	block := i.currentHead()
 	blockHash, err := block.Hash()
 	if err != nil {
 		return err
 	}
 
-	pubKey, err := req.PubKeyString()
+	state, err := i.CalculateState(block)
 	if err != nil {
 		return err
 	}
 
-	state, err := i.i.CalculateState(block)
-	if err != nil {
+	testBlock := blockartlib.Block{
+		PrevBlock: blockHash,
+		BlockNum:  block.BlockNum + 1,
+		PubKey:    i.privKey.PublicKey,
+		Records:   []blockartlib.Operation{op},
+	}
+	if _, err := i.TransformState(state, testBlock); err != nil {
 		return err
 	}
 
-	inkLevel := state.inkLevels[pubKey]
-	inkCost, err := req.ADD.Shape.InkCost()
-	if err != nil {
+	return nil
+}
+
+func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.AddShapeResponse) error {
+
+	if err := i.i.testOperation(*req); err != nil {
 		return err
 	}
-	if inkLevel < inkCost {
-		return blockartlib.InsufficientInkError(state.inkLevels[pubKey])
-	}
+
 	if err := i.i.addOperation(*req); err != nil {
 		return fmt.Errorf("add operation error: %+v", err)
 	}
@@ -58,9 +64,14 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	if err != nil {
 		return err
 	}
-	blockHash = i.i.waitForValidateNum(opHash, req.ValidateNum)
+	blockHash := i.i.waitForValidateNum(opHash, req.ValidateNum)
 
-	state, err = i.i.CalculateState(i.i.currentHead())
+	state, err := i.i.CalculateState(i.i.currentHead())
+	if err != nil {
+		return err
+	}
+
+	pubKey, err := req.PubKeyString()
 	if err != nil {
 		return err
 	}
@@ -106,6 +117,9 @@ func (i *InkMinerRPC) GetInk(req *string, resp *uint32) error {
 }
 
 func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) error {
+	if err := i.i.testOperation(*req); err != nil {
+		return err
+	}
 	if err := i.i.addOperation(*req); err != nil {
 		return err
 	}
