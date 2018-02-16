@@ -46,6 +46,22 @@ func (s Shape) SvgString() string {
 	return fmt.Sprintf(`<%s d="%s" stroke="%s" fill="%s"/>`, s.Type, s.Svg, s.Stroke, s.Fill)
 }
 
+func (s Shape) Valid() error {
+	if s.Svg == "" || s.Fill == "" || s.Stroke == "" {
+		return fmt.Errorf("one of Svg, Fill, Stroke is empty: %+v", s)
+	}
+	if s.Type != PATH {
+		return fmt.Errorf("unknown shape type: %+v", s.Type)
+	}
+	if err := svgStringValidityCheck(s.Svg); err != nil {
+		return err
+	}
+	if err := svgShapeValidityCheck(s.Svg, s.Fill, s.Stroke); err != nil {
+		return err
+	}
+	return nil
+}
+
 type AddShapeResponse struct {
 	BlockHash    string
 	InkRemaining uint32

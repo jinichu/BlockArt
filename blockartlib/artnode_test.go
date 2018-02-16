@@ -1,18 +1,25 @@
 package blockartlib
+
 import (
-"testing"
-"math/rand"
-"math"
-"fmt"
+	"fmt"
+	"math"
+	"math/rand"
+	"testing"
 )
 
+func checkShapeValid(t *testing.T, s Shape) {
+}
+
 // Test shape overlap
-func TestTwoLinesDontOverlap(t * testing.T) {
+func TestTwoLinesDontOverlap(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 0 10 h 20",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -21,10 +28,12 @@ func TestTwoLinesDontOverlap(t * testing.T) {
 		Stroke: "red",
 		Fill:   "transparent",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedResult := false
 	actualResult := DoesShapeOverlap(sh0, sh1)
-
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -37,12 +46,15 @@ func TestTwoLinesDontOverlap(t * testing.T) {
 	}
 }
 
-func TestTwoLinesColinear(t * testing.T) {
+func TestTwoLinesColinear(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 0 10 H 20",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -50,6 +62,9 @@ func TestTwoLinesColinear(t * testing.T) {
 		Svg:    "M 0 10 H 20",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	expectedResult := true
@@ -66,13 +81,15 @@ func TestTwoLinesColinear(t * testing.T) {
 	}
 }
 
-
-func TestTwoLinesTouch(t * testing.T) {
+func TestTwoLinesTouch(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 0 10 H 20",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -81,6 +98,9 @@ func TestTwoLinesTouch(t * testing.T) {
 		Stroke: "red",
 		Fill:   "transparent",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedResult := true
 	actualResult := DoesShapeOverlap(sh0, sh1)
@@ -96,12 +116,15 @@ func TestTwoLinesTouch(t * testing.T) {
 	}
 }
 
-func TestTwoLinesCross(t * testing.T) {
+func TestTwoLinesCross(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 400 170 L 400 310",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -110,6 +133,9 @@ func TestTwoLinesCross(t * testing.T) {
 		Stroke: "red",
 		Fill:   "transparent",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedResult := true
 	actualResult := DoesShapeOverlap(sh0, sh1)
@@ -125,12 +151,15 @@ func TestTwoLinesCross(t * testing.T) {
 	}
 }
 
-func TestTwoShapeOutlinesOverlap(t * testing.T) {
+func TestTwoShapeOutlinesOverlap(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 400 300 L 400 200 L 300 150 L 300 250 L 400 300 ",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -139,6 +168,9 @@ func TestTwoShapeOutlinesOverlap(t * testing.T) {
 		Stroke: "red",
 		Fill:   "transparent",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedResult := true
 	actualResult := DoesShapeOverlap(sh0, sh1)
@@ -154,12 +186,15 @@ func TestTwoShapeOutlinesOverlap(t * testing.T) {
 	}
 }
 
-func TestTwoShapeOutlinesDontOverlap(t * testing.T) {
+func TestTwoShapeOutlinesDontOverlap(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 400 300 L 400 200 L 300 150 L 300 250 L 400 300 ",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -168,6 +203,9 @@ func TestTwoShapeOutlinesDontOverlap(t * testing.T) {
 		Stroke: "red",
 		Fill:   "transparent",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedResult := false
 	actualResult := DoesShapeOverlap(sh0, sh1)
@@ -183,12 +221,15 @@ func TestTwoShapeOutlinesDontOverlap(t * testing.T) {
 	}
 }
 
-func TestTwoShapeOutlinesDontOverlapOneCompletelyEnclosingTheOther(t * testing.T) {
+func TestTwoShapeOutlinesDontOverlapOneCompletelyEnclosingTheOther(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 350 250 L 500 250 L 600 350 L 450 450 L 350 350 L 350 250 ",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -197,6 +238,9 @@ func TestTwoShapeOutlinesDontOverlapOneCompletelyEnclosingTheOther(t * testing.T
 		Stroke: "red",
 		Fill:   "transparent",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 	expectedResult := false
 	actualResult := DoesShapeOverlap(sh0, sh1)
 
@@ -211,12 +255,15 @@ func TestTwoShapeOutlinesDontOverlapOneCompletelyEnclosingTheOther(t * testing.T
 	}
 }
 
-func TestTwoShapesDontOverlapOuterShapeOutlineInnerShapeFilled(t * testing.T) {
+func TestTwoShapesDontOverlapOuterShapeOutlineInnerShapeFilled(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 350 250 L 500 250 L 600 350 L 450 450 L 350 350 L 350 250 ",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -225,9 +272,11 @@ func TestTwoShapesDontOverlapOuterShapeOutlineInnerShapeFilled(t * testing.T) {
 		Stroke: "red",
 		Fill:   "filled",
 	}
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 	expectedResult := false
 	actualResult := DoesShapeOverlap(sh0, sh1)
-
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -240,12 +289,15 @@ func TestTwoShapesDontOverlapOuterShapeOutlineInnerShapeFilled(t * testing.T) {
 	}
 }
 
-func TestTwoShapesDoOverlapOuterShapeFilledInnerShapeOutline(t * testing.T) {
+func TestTwoShapesDoOverlapOuterShapeFilledInnerShapeOutline(t *testing.T) {
 	sh0 := Shape{
 		Type:   PATH,
 		Svg:    "M 450 150 L 200 300 L 300 500 L 600 300 L 450 150 ",
 		Stroke: "red",
 		Fill:   "red",
+	}
+	if err := sh0.Valid(); err != nil {
+		t.Fatal(err)
 	}
 
 	sh1 := Shape{
@@ -254,7 +306,9 @@ func TestTwoShapesDoOverlapOuterShapeFilledInnerShapeOutline(t * testing.T) {
 		Stroke: "red",
 		Fill:   "transparent",
 	}
-
+	if err := sh1.Valid(); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedResult := true
 	actualResult := DoesShapeOverlap(sh0, sh1)
@@ -271,13 +325,17 @@ func TestTwoShapesDoOverlapOuterShapeFilledInnerShapeOutline(t * testing.T) {
 }
 
 //Test ink cost
-func TestInkCostTransparentStrokeTransparentFill(t * testing.T) {
+func TestInkCostTransparentStrokeTransparentFill(t *testing.T) {
 	sh := Shape{
 		Type:   PATH,
 		Svg:    "M 0 0 H 20 V 20 h -20 Z",
 		Stroke: "transparent",
 		Fill:   "transparent",
 	}
+	if err := sh.Valid(); err == nil {
+		t.Fatal("expected error")
+	}
+
 	expectedResult := InvalidShapeSvgStringError(sh.Svg)
 	_, actualResult := sh.InkCost()
 
@@ -286,12 +344,15 @@ func TestInkCostTransparentStrokeTransparentFill(t * testing.T) {
 	}
 }
 
-func TestInkCostRedStrokeTransparentFill(t * testing.T) {
+func TestInkCostRedStrokeTransparentFill(t *testing.T) {
 	sh := Shape{
 		Type:   PATH,
 		Svg:    "M 0 0 H 20 V 20 h -20 Z",
 		Stroke: "red",
 		Fill:   "transparent",
+	}
+	if err := sh.Valid(); err != nil {
+		t.Fatal(err)
 	}
 	expectedResult := uint32(80)
 	actualResult, _ := sh.InkCost()
@@ -301,12 +362,15 @@ func TestInkCostRedStrokeTransparentFill(t * testing.T) {
 	}
 }
 
-func TestInkCostTransparentStrokeRedFill(t * testing.T) {
+func TestInkCostTransparentStrokeRedFill(t *testing.T) {
 	sh := Shape{
 		Type:   PATH,
 		Svg:    "M 0 0 H 20 V 20 h -20 Z",
 		Stroke: "transparent",
 		Fill:   "red",
+	}
+	if err := sh.Valid(); err != nil {
+		t.Fatal(err)
 	}
 	expectedResult := uint32(400)
 	actualResult, _ := sh.InkCost()
@@ -316,12 +380,15 @@ func TestInkCostTransparentStrokeRedFill(t * testing.T) {
 	}
 }
 
-func TestInkCostRedStrokeRedFill(t * testing.T) {
+func TestInkCostRedStrokeRedFill(t *testing.T) {
 	sh := Shape{
 		Type:   PATH,
 		Svg:    "M 0 0 H 20 V 20 h -20 Z",
 		Stroke: "red",
 		Fill:   "red",
+	}
+	if err := sh.Valid(); err != nil {
+		t.Fatal(err)
 	}
 	expectedResult := uint32(480)
 	actualResult, _ := sh.InkCost()
@@ -331,9 +398,8 @@ func TestInkCostRedStrokeRedFill(t * testing.T) {
 	}
 }
 
-
 // Testing Fill Cost
-func TestCalculateSimpleFillCost(t * testing.T) {
+func TestCalculateSimpleFillCost(t *testing.T) {
 	testPath := "M 0 0 H 20 V 20 h -20 Z"
 	expectedResult := 400.0
 	actualResult, _ := calculateFillCost(testPath)
@@ -343,7 +409,7 @@ func TestCalculateSimpleFillCost(t * testing.T) {
 	}
 }
 
-func TestCalculateComplexPolygon(t * testing.T) {
+func TestCalculateComplexPolygon(t *testing.T) {
 	testPath := "M 400 300 L 350 250 L 300 250 L 350 200 L 300 150 L 350 100 L 400 150 L 400 200 L 450 200 L 400 250 L 400 300"
 	expectedResult := 12500.0
 	actualResult, _ := calculateFillCost(testPath)
@@ -353,7 +419,7 @@ func TestCalculateComplexPolygon(t * testing.T) {
 	}
 }
 
-func TestCalculateComplexPolygon2(t * testing.T) {
+func TestCalculateComplexPolygon2(t *testing.T) {
 	testPath := "M 400 250 L 450 200 L 400 150 L 400 200 L 350 200 L 400 250"
 	expectedResult := 3750.0
 	actualResult, _ := calculateFillCost(testPath)
@@ -363,7 +429,7 @@ func TestCalculateComplexPolygon2(t * testing.T) {
 	}
 }
 
-func TestCalculateComplexPolygon3(t * testing.T) {
+func TestCalculateComplexPolygon3(t *testing.T) {
 	testPath := "M 390 240 L 450 210 L 390 210 L 360 150 L 330 210 L 300 240 L 300 330 L 390 300 L 390 240"
 	expectedResult := 11700.0
 	actualResult, _ := calculateFillCost(testPath)
@@ -373,7 +439,7 @@ func TestCalculateComplexPolygon3(t * testing.T) {
 	}
 }
 
-func TestSelfIntersectionFails(t * testing.T) {
+func TestSelfIntersectionFails(t *testing.T) {
 	testPath := "M 400 300 L 500 450 L 400 450 L 500 350 L 400 350 L 400 300"
 	expectedResult := InvalidShapeSvgStringError(testPath)
 	_, err := calculateFillCost(testPath)
@@ -392,9 +458,8 @@ func TestInersectionFails2(t *testing.T) {
 	}
 }
 
-
 //Testing LineCost
-func TestCalculateSimpleLineCost(t * testing.T) {
+func TestCalculateSimpleLineCost(t *testing.T) {
 	testPath := "M 0 10 H 20"
 	expectedResult := 20.0
 	actualResult := calculateLineCost(testPath)
@@ -404,7 +469,7 @@ func TestCalculateSimpleLineCost(t * testing.T) {
 	}
 }
 
-func TestCalculateBentLineCost(t * testing.T) {
+func TestCalculateBentLineCost(t *testing.T) {
 	testPath := "M 50 50 L 100 100 l 25 0"
 	expectedResult := math.Sqrt(5000) + 25
 	actualResult := calculateLineCost(testPath)
@@ -414,7 +479,7 @@ func TestCalculateBentLineCost(t * testing.T) {
 	}
 }
 
-func TestTrianglesLineCost(t * testing.T) {
+func TestTrianglesLineCost(t *testing.T) {
 	testPath := "M 50 50 L 100 100 l 25 0 Z"
 	expectedResult := math.Sqrt(5000) + 25 + math.Sqrt(8125)
 	actualResult := calculateLineCost(testPath)
@@ -424,7 +489,7 @@ func TestTrianglesLineCost(t * testing.T) {
 	}
 }
 
-func TestIntersectingShapeOutlineCost(t * testing.T) {
+func TestIntersectingShapeOutlineCost(t *testing.T) {
 	testPath := "M 550 200 L 450 300 L 350 200 L 450 200 L 500 250 L 550 300"
 	expectedResult := (6 * math.Sqrt(5000)) + 100
 	actualResult := calculateLineCost(testPath)
@@ -434,7 +499,7 @@ func TestIntersectingShapeOutlineCost(t * testing.T) {
 	}
 }
 
-func TestIntersectingLinesCost(t * testing.T) {
+func TestIntersectingLinesCost(t *testing.T) {
 	testPath := "M 250 200 L 400 200 M 300 100 L 300 250"
 	expectedResult := 300.0
 	actualResult := calculateLineCost(testPath)
@@ -450,7 +515,6 @@ func TestValidShapeSvgString(t *testing.T) {
 		"M 0 10 H 20",
 		"M 0 0 H 20 V 20 h -20 Z",
 	}
-
 
 	for _, testPath := range testPaths {
 		expectedResult := nilFunc()
@@ -488,7 +552,6 @@ func TestInvalidPathSvgString(t *testing.T) {
 		"l 0 h 20 10 z 30",
 	}
 
-
 	for _, testPath := range testPaths {
 		expectedResult := InvalidShapeSvgStringError(testPath)
 		actualResult := svgStringValidityCheck(testPath)
@@ -498,7 +561,6 @@ func TestInvalidPathSvgString(t *testing.T) {
 		}
 	}
 }
-
 
 // Testing isValidPath Helper Function
 func TestValidPathBasic(t *testing.T) {
@@ -583,7 +645,7 @@ func TestInvalidPathLackingLocationInput(t *testing.T) {
 	}
 }
 
-// HELPERS Generate random string 
+// HELPERS Generate random string
 func generateRandomString(n int) (res string) {
 	var alphabet = []rune("abcdefghijklmnopqrstuvwxyz")
 

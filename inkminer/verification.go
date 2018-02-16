@@ -30,12 +30,8 @@ func isOpSigValid(operation blockartlib.Operation) error {
 }
 
 func (i *InkMiner) validateShape(shape blockartlib.Shape) error {
-	// TODO: validate the shape data
-	if shape.Svg == "" || shape.Fill == "" || shape.Stroke == "" {
-		return fmt.Errorf("one of Svg, Fill, Stroke is empty: %+v", shape)
-	}
-	if shape.Type != blockartlib.PATH {
-		return fmt.Errorf("unknown shape type: %+v", shape.Type)
+	if err := shape.Valid(); err != nil {
+		return err
 	}
 	points := blockartlib.ComputeVertices(shape.Svg)
 	for j := 0; j < len(points); j++ {
