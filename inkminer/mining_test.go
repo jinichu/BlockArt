@@ -38,13 +38,15 @@ func TestMineWorker(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !found {
-		t.Fatal("expected hash to be found!")
-	}
+
 	block.Nonce = nonce
 	hash, err := block.Hash()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !found {
+		t.Fatalf("expected hash to be found! nonce %d, hash %q", nonce, hash)
 	}
 	if numZeros(hash) != int(i.settings.PoWDifficultyNoOpBlock) {
 		t.Fatalf("expected %d zeros", i.settings.PoWDifficultyNoOpBlock)

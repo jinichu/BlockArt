@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"./blockartlib"
@@ -34,7 +35,7 @@ func main() {
 func webColor(c color.Color) string {
 	r, g, b, a := c.RGBA()
 	const max = 0xffff
-	return fmt.Sprintf("rgba(%f, %f, %f, %f)", float64(r)/max*255, float64(g)/max*255, float64(b)/max*255, float64(a)/max)
+	return fmt.Sprintf("rgba(%d, %d, %d, %f)", int(float64(r)/max*255), int(float64(g)/max*255), int(float64(b)/max*255), float64(a)/max)
 }
 
 func run() error {
@@ -64,17 +65,27 @@ func run() error {
 
 	margin := 100
 
-	for x := bounds.Min.X; x < bounds.Max.X; x++ {
-		for y := bounds.Min.Y; x < bounds.Max.Y; y++ {
-			x := x
-			y := y
-			go func() {
+	const workers = 32
+
+	type work struct {
+		path, fill, stroke string
+	}
+
+	workChan := make(chan work, workers)
+	var wg sync.WaitGroup
+
+	log.Printf("spinning up %d workers", workers)
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for w := range workChan {
 				for {
-					color := webColor(img.At(x, y))
-					path := fmt.Sprintf("M %d %d v 1 h 1 v -1 Z", margin+x*2, margin+y*2)
-					if _, _, _, err := canvas.AddShape(0, blockartlib.PATH, path, color, color); err != nil {
+					if _, _, _, err := canvas.AddShape(0, blockartlib.PATH, w.path, w.fill, w.stroke); err != nil {
 						if strings.HasPrefix(err.Error(), "BlockArt: Not enough ink to addShape") {
-							log.Printf("%d, %d: sleeping... %s", x, y, err)
+							log.Printf("%q: sleeping... %s", w.path, err)
 							time.Sleep(1 * time.Second)
 							continue
 						} else {
@@ -83,9 +94,27 @@ func run() error {
 					}
 					break
 				}
-			}()
+			}
+		}()
+	}
+
+	const stride = 8
+
+	for x := bounds.Min.X; x < bounds.Max.X; x += stride {
+		for y := bounds.Min.Y; y < bounds.Max.Y; y += stride {
+			log.Printf("drawing %d x %d", x, y)
+			color := webColor(img.At(x, y))
+			path := fmt.Sprintf("M %d %d v %d h %d v -%d Z", margin+x, margin+y, stride, stride, stride)
+			workChan <- work{
+				path:   path,
+				fill:   color,
+				stroke: color,
+			}
 		}
 	}
+
+	close(workChan)
+	wg.Wait()
 
 	return nil
 }

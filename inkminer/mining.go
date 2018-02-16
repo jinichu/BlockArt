@@ -202,10 +202,15 @@ func (i *InkMiner) mineWorker(block blockartlib.Block, oldNonce uint32, maxItera
 		difficulty = i.settings.PoWDifficultyNoOpBlock
 	}
 
+	hashNoNonce, err := block.HashNoNonce()
+	if err != nil {
+		return 0, false, err
+	}
+
 	for i := 0; i < maxIterations; i++ {
 		oldNonce += 1
 		block.Nonce = oldNonce
-		hash, err := block.Hash()
+		hash, err := block.HashApplyNonce(hashNoNonce)
 		if err != nil {
 			return 0, false, err
 		}
