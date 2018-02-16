@@ -660,3 +660,40 @@ func generateRandomString(n int) (res string) {
 func nilFunc() error {
 	return nil
 }
+
+func TestIntersectionSinglePixels(t *testing.T) {
+	a := Shape{
+		Type:   PATH,
+		Svg:    "M 400 300 v 1 h 1 v -1 Z",
+		Fill:   "red",
+		Stroke: "red",
+	}
+	if err := a.Valid(); err != nil {
+		t.Fatal(err)
+	}
+	b := Shape{
+		Type:   PATH,
+		Svg:    "M 400 302 v 1 h 1 v -1 Z",
+		Fill:   "red",
+		Stroke: "red",
+	}
+	if err := b.Valid(); err != nil {
+		t.Fatal(err)
+	}
+	c := Shape{
+		Type:   PATH,
+		Svg:    "M 402 300 v 1 h 1 v -1 Z",
+		Fill:   "red",
+		Stroke: "red",
+	}
+	if err := c.Valid(); err != nil {
+		t.Fatal(err)
+	}
+
+	if DoesShapeOverlap(a, b) {
+		t.Fatalf("shouldn't overlap! %+v %+v", a, b)
+	}
+	if DoesShapeOverlap(a, c) {
+		t.Fatalf("shouldn't overlap! %+v %+v", a, c)
+	}
+}
