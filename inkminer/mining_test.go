@@ -171,6 +171,15 @@ func TestInkMiner_CalculateState(t *testing.T) {
 func TestTransformStateIntersectionsMultipleBlocks(t *testing.T) {
 	im := generateTestInkMiner(t)
 
+	key2, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey2, err := crypto.MarshalPublic(&key2.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	operation1 := blockartlib.Operation{
 		OpType: blockartlib.ADD,
 		Id:     1,
@@ -180,20 +189,21 @@ func TestTransformStateIntersectionsMultipleBlocks(t *testing.T) {
 
 	operation2 := blockartlib.Operation{
 		OpType: blockartlib.ADD,
-		Id:     1,
+		Id:     2,
 		PubKey: im.privKey.PublicKey,
 	}
-	operation2.ADD.Shape = blockartlib.TestShape(5, 1)
+	operation2.ADD.Shape = blockartlib.TestShape(5, 0)
 
 	operation3 := blockartlib.Operation{
 		OpType: blockartlib.ADD,
-		Id:     2,
-		PubKey: im.privKey.PublicKey,
+		Id:     3,
+		PubKey: key2.PublicKey,
 	}
 	operation3.ADD.Shape = blockartlib.TestShape(5, 0)
 
 	state := NewState()
 	state.inkLevels[im.publicKey] = 1000000
+	state.inkLevels[pubKey2] = 1000000
 
 	block := blockartlib.Block{
 		PrevBlock: im.settings.GenesisBlockHash,
@@ -240,6 +250,15 @@ func TestTransformStateIntersectionsMultipleBlocks(t *testing.T) {
 func TestTransformStateIntersectionsOneBlock(t *testing.T) {
 	im := generateTestInkMiner(t)
 
+	key2, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey2, err := crypto.MarshalPublic(&key2.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	operation1 := blockartlib.Operation{
 		OpType: blockartlib.ADD,
 		Id:     1,
@@ -252,17 +271,18 @@ func TestTransformStateIntersectionsOneBlock(t *testing.T) {
 		Id:     1,
 		PubKey: im.privKey.PublicKey,
 	}
-	operation2.ADD.Shape = blockartlib.TestShape(5, 1)
+	operation2.ADD.Shape = blockartlib.TestShape(5, 0)
 
 	operation3 := blockartlib.Operation{
 		OpType: blockartlib.ADD,
 		Id:     2,
-		PubKey: im.privKey.PublicKey,
+		PubKey: key2.PublicKey,
 	}
 	operation3.ADD.Shape = blockartlib.TestShape(5, 0)
 
 	state := NewState()
 	state.inkLevels[im.publicKey] = 1000000
+	state.inkLevels[pubKey2] = 1000000
 
 	block := blockartlib.Block{
 		PrevBlock: im.settings.GenesisBlockHash,

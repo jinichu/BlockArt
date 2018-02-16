@@ -408,7 +408,11 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 			}
 			createdState.inkLevels[pubkey] -= opCost
 
-			for shapeHash := range createdState.shapeOwners {
+			for shapeHash, owner := range createdState.shapeOwners {
+				if owner == pubkey {
+					continue
+				}
+
 				shape := createdState.shapes[shapeHash]
 				if blockartlib.DoesShapeOverlap(shape, op.ADD.Shape) {
 					return State{}, blockartlib.ShapeOverlapError(shapeHash)
