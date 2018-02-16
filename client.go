@@ -17,6 +17,7 @@ var (
 
 func run() error {
 	flag.Parse()
+	log.SetFlags(log.Flags() | log.Lshortfile)
 
 	privKey, err := crypto.LoadPrivate(*public, *private)
 	if err != nil {
