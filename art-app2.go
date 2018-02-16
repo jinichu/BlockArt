@@ -76,7 +76,7 @@ func run() error {
 	}
 
 	// Close the canvas.
-	ink5, err = canvas.CloseCanvas()
+	ink5, err := canvas.CloseCanvas()
 	if err != nil {
 		return err
 	}

@@ -20,8 +20,8 @@ import (
 )
 
 var minerAddr = flag.String("miner", "127.0.0.1:8080", "the address of the miner to connect to")
-var pubKeyFile = flag.String("pub", "testkeys/test1-public.key", "path to public key file")
-var privKeyFile = flag.String("priv", "testkeys/test1-private.key", "path to private key file")
+var pubKeyFile = flag.String("pub", "testkeys/test2-public.key", "path to public key file")
+var privKeyFile = flag.String("priv", "testkeys/test2-private.key", "path to private key file")
 
 func main() {
 	flag.Parse()
@@ -51,7 +51,7 @@ func run() error {
 
 	shapeHash, blockHash, ink, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 60 10 l 0 20 L 60 20 Z", "yellow", "yellow")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	log.Printf("Delete a shape that doesn't exist")
@@ -59,7 +59,7 @@ func run() error {
 	// Delete shape that doesn't exist
 	ink2, err := canvas.DeleteShape(validateNum, "foobar")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	log.Printf("Add black shape")
