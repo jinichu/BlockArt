@@ -388,7 +388,7 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 		if _, ok := createdState.commitedOperations[opHash]; ok {
 			return State{}, fmt.Errorf("operation has already been committed! %+v", opHash)
 		}
-		createdState.commitedOperations[opHash] = 1
+		createdState.commitedOperations[opHash] = 0
 
 		pubkey, err := op.PubKeyString()
 		if err != nil {

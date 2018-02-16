@@ -12,6 +12,8 @@ import (
 	"../blockartlib"
 )
 
+const validateNum = 0
+
 type Client struct {
 	mux      *http.ServeMux
 	privKey  *ecdsa.PrivateKey
@@ -174,7 +176,7 @@ func (c *Client) handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, _, _, err := c.canvas.AddShape(1, blockartlib.PATH, body.Svg, body.Fill, body.Stroke); err != nil {
+	if _, _, _, err := c.canvas.AddShape(validateNum, blockartlib.PATH, body.Svg, body.Fill, body.Stroke); err != nil {
 		handleErr(w, err)
 		return
 	}
@@ -192,7 +194,7 @@ func (c *Client) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := c.canvas.DeleteShape(1, hash); err != nil {
+	if _, err := c.canvas.DeleteShape(validateNum, hash); err != nil {
 		handleErr(w, err)
 		return
 	}
