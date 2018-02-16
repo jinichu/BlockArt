@@ -20,6 +20,8 @@ import (
 )
 
 var minerAddr = flag.String("miner", "127.0.0.1:8080", "the address of the miner to connect to")
+var pubKeyFile = flag.String("pub", "testkeys/test2-public.key", "path to public key file")
+var privKeyFile = flag.String("priv", "testkeys/test2-private.key", "path to private key file")
 
 func main() {
 	flag.Parse()
@@ -31,7 +33,7 @@ func main() {
 
 func run() error {
 	privKey, err := crypto.LoadPrivate(
-		"testkeys/test1-public.key", "testkeys/test1-private.key",
+		*pubKeyFile, *privKeyFile,
 	)
 	if err != nil {
 		return err
@@ -45,31 +47,27 @@ func run() error {
 
 	validateNum := uint8(2)
 
-	log.Printf("add line")
+	log.Printf("Add yellow line that conflicts")
 
-	// Add a square.
-	shapeHash, blockHash, ink, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 100 100 L 200 100 L 200 110 L 100 110 Z", "blue", "red")
+	shapeHash, blockHash, ink, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 60 10 l 0 20 L 60 20 Z", "yellow", "yellow")
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Printf("Delete a shape that doesn't exist")
+
+	// Delete shape that doesn't exist
+	ink2, err := canvas.DeleteShape(validateNum, "foobar")
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Printf("Add black shape")
+
+	shapeHash2, blockHash2, ink3, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 160 100 l 0 20 l 20 40 l 40 0 Z", "black", "black")
 	if err != nil {
 		return err
 	}
-
-	log.Printf("add line2")
-
-	// Add another line.
-	shapeHash2, blockHash2, ink2, err := canvas.AddShape(validateNum, blockartlib.PATH, "M 100 120 L 200 120", "transparent", "blue")
-	if err != nil {
-		return err
-	}
-
-	log.Printf("delete shape")
-
-	// Delete the first line.
-	ink3, err := canvas.DeleteShape(validateNum, shapeHash)
-	if err != nil {
-		return err
-	}
-
-	// assert ink3 > ink2
 
 	// Close the canvas.
 	ink4, err := canvas.CloseCanvas()
@@ -77,14 +75,16 @@ func run() error {
 		return err
 	}
 
-	_ = settings
+	// Unused variables
 	_ = blockHash
-	_ = ink
-	_ = shapeHash2
 	_ = blockHash2
+	_ = ink
 	_ = ink2
 	_ = ink3
 	_ = ink4
+	_ = shapeHash
+	_ = shapeHash2
+	_ = settings
 
 	return nil
 }
