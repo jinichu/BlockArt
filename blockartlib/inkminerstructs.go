@@ -92,12 +92,12 @@ func (o Operation) PubKeyString() (string, error) {
 	return key, nil
 }
 
-// These are test shapes with a fixed cost.
-var (
-	TestShapeCost5 = Shape{
+// TestShape returns a test shape with a specific offset and cost
+func TestShape(cost, offset int) Shape {
+	return Shape{
 		Type:   PATH,
-		Svg:    "M 0 0 L 0 5",
+		Svg:    fmt.Sprintf("M %d 0 L %d %d", offset, offset, cost),
 		Fill:   "transparent",
 		Stroke: "red",
 	}
-)
+}

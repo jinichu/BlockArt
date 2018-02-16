@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -60,6 +61,10 @@ func fixCurve(curve elliptic.Curve) elliptic.Curve {
 
 // MarshalPublic marshals a x509/PEM encoded ECDSA public key.
 func MarshalPublic(key *ecdsa.PublicKey) (string, error) {
+	if key == nil || key.Curve == nil || key.X == nil || key.Y == nil {
+		return "", fmt.Errorf("key or part of key is nil: %+v", key)
+	}
+
 	key.Curve = fixCurve(key.Curve)
 
 	rawPriv, err := x509.MarshalPKIXPublicKey(key)
