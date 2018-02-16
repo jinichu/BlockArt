@@ -792,7 +792,7 @@ func pointInPolygon(vectors []Vector, point Point) bool {
 	return false
 }
 
-func doesShapeOverlap(sh0 Shape, sh1 Shape) bool {
+func DoesShapeOverlap(sh0 Shape, sh1 Shape) bool {
 	vectors0 := computeVectors(ComputeVertices(sh0.Svg))
 	vectors1 := computeVectors(ComputeVertices(sh1.Svg))
 

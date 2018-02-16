@@ -23,14 +23,14 @@ func TestTwoLinesDontOverlap(t * testing.T) {
 	}
 
 	expectedResult := false
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -53,13 +53,13 @@ func TestTwoLinesColinear(t * testing.T) {
 	}
 
 	expectedResult := true
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -83,13 +83,13 @@ func TestTwoLinesTouch(t * testing.T) {
 	}
 
 	expectedResult := true
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -112,13 +112,13 @@ func TestTwoLinesCross(t * testing.T) {
 	}
 
 	expectedResult := true
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -141,13 +141,13 @@ func TestTwoShapeOutlinesOverlap(t * testing.T) {
 	}
 
 	expectedResult := true
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -170,13 +170,13 @@ func TestTwoShapeOutlinesDontOverlap(t * testing.T) {
 	}
 
 	expectedResult := false
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -198,13 +198,13 @@ func TestTwoShapeOutlinesDontOverlapOneCompletelyEnclosingTheOther(t * testing.T
 		Fill:   "transparent",
 	}
 	expectedResult := false
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -226,14 +226,14 @@ func TestTwoShapesDontOverlapOuterShapeOutlineInnerShapeFilled(t * testing.T) {
 		Fill:   "filled",
 	}
 	expectedResult := false
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
@@ -257,13 +257,13 @@ func TestTwoShapesDoOverlapOuterShapeFilledInnerShapeOutline(t * testing.T) {
 
 
 	expectedResult := true
-	actualResult := doesShapeOverlap(sh0, sh1)
+	actualResult := DoesShapeOverlap(sh0, sh1)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
 	}
 
-	actualResult = doesShapeOverlap(sh1, sh0)
+	actualResult = DoesShapeOverlap(sh1, sh0)
 
 	if expectedResult != actualResult {
 		t.Fatalf("Expected %f but got %f", expectedResult, actualResult)
