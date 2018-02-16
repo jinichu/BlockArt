@@ -75,7 +75,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		Id:     10,
 		PubKey: inkMiner.privKey.PublicKey,
 	}
-	operation1.ADD.Shape = blockartlib.TestShapeCost5
+	operation1.ADD.Shape = blockartlib.TestShape(5, 0)
 
 	block2 := inkMiner.TestMine(t, blockartlib.Block{
 		Records:   []blockartlib.Operation{operation1},
@@ -128,7 +128,7 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		OpType: blockartlib.ADD,
 		PubKey: inkMiner.privKey.PublicKey,
 	}
-	operation2.ADD.Shape = blockartlib.TestShapeCost5
+	operation2.ADD.Shape = blockartlib.TestShape(5, 1)
 
 	block3 := inkMiner.TestMine(t, blockartlib.Block{
 		PrevBlock: blockHash2,
@@ -165,6 +165,113 @@ func TestInkMiner_CalculateState(t *testing.T) {
 		if got != want {
 			t.Fatal("ERROR: Incorrect inkLevels. Got: ", got, " Expected: ", want)
 		}
+	}
+}
+
+func TestTransformStateIntersectionsMultipleBlocks(t *testing.T) {
+	im := generateTestInkMiner(t)
+
+	operation1 := blockartlib.Operation{
+		OpType: blockartlib.ADD,
+		Id:     1,
+		PubKey: im.privKey.PublicKey,
+	}
+	operation1.ADD.Shape = blockartlib.TestShape(5, 0)
+
+	operation2 := blockartlib.Operation{
+		OpType: blockartlib.ADD,
+		Id:     1,
+		PubKey: im.privKey.PublicKey,
+	}
+	operation2.ADD.Shape = blockartlib.TestShape(5, 1)
+
+	operation3 := blockartlib.Operation{
+		OpType: blockartlib.ADD,
+		Id:     2,
+		PubKey: im.privKey.PublicKey,
+	}
+	operation3.ADD.Shape = blockartlib.TestShape(5, 0)
+
+	state := NewState()
+	state.inkLevels[im.publicKey] = 1000000
+
+	block := blockartlib.Block{
+		PrevBlock: im.settings.GenesisBlockHash,
+		BlockNum:  1,
+		Records:   []blockartlib.Operation{operation1},
+		PubKey:    im.privKey.PublicKey,
+	}
+	hash, err := block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = im.TransformState(state, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block = blockartlib.Block{
+		PrevBlock: hash,
+		BlockNum:  2,
+		Records:   []blockartlib.Operation{operation2},
+		PubKey:    im.privKey.PublicKey,
+	}
+	hash, err = block.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = im.TransformState(state, block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block = blockartlib.Block{
+		PrevBlock: hash,
+		BlockNum:  3,
+		Records:   []blockartlib.Operation{operation3},
+		PubKey:    im.privKey.PublicKey,
+	}
+	state, err = im.TransformState(state, block)
+	if err == nil {
+		t.Fatalf("expected error from intersecting operations")
+	}
+}
+
+func TestTransformStateIntersectionsOneBlock(t *testing.T) {
+	im := generateTestInkMiner(t)
+
+	operation1 := blockartlib.Operation{
+		OpType: blockartlib.ADD,
+		Id:     1,
+		PubKey: im.privKey.PublicKey,
+	}
+	operation1.ADD.Shape = blockartlib.TestShape(5, 0)
+
+	operation2 := blockartlib.Operation{
+		OpType: blockartlib.ADD,
+		Id:     1,
+		PubKey: im.privKey.PublicKey,
+	}
+	operation2.ADD.Shape = blockartlib.TestShape(5, 1)
+
+	operation3 := blockartlib.Operation{
+		OpType: blockartlib.ADD,
+		Id:     2,
+		PubKey: im.privKey.PublicKey,
+	}
+	operation3.ADD.Shape = blockartlib.TestShape(5, 0)
+
+	state := NewState()
+	state.inkLevels[im.publicKey] = 1000000
+
+	block := blockartlib.Block{
+		PrevBlock: im.settings.GenesisBlockHash,
+		BlockNum:  1,
+		Records:   []blockartlib.Operation{operation1, operation3},
+		PubKey:    im.privKey.PublicKey,
+	}
+	if _, err := im.TransformState(state, block); err == nil {
+		t.Fatalf("expected error from intersecting operations")
 	}
 }
 
