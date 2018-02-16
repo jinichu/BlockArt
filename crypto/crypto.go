@@ -3,8 +3,8 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/md5"
 	"crypto/rand"
-	"crypto/sha1"
 	"crypto/x509"
 	"encoding/gob"
 	"encoding/hex"
@@ -147,7 +147,7 @@ func LoadPrivate(publicPath, privatePath string) (*ecdsa.PrivateKey, error) {
 
 // Compute the Hash of any string
 func Hash(a interface{}) (string, error) {
-	h := sha1.New()
+	h := md5.New()
 	if err := json.NewEncoder(h).Encode(a); err != nil {
 		return "", nil
 	}
