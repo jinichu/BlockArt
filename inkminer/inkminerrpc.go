@@ -1,6 +1,7 @@
 package inkminer
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -216,11 +217,18 @@ func (i *InkMiner) waitForValidateNum(opHash string, validateNum uint8) (string,
 		validateNum: validateNum,
 	}
 
+	defer func() {
+		close(validateNumWaiter.done)
+		close(validateNumWaiter.err)
+	}()
+
 	i.mu.Lock()
 	i.mu.validateNumMap[opHash] = validateNumWaiter
 	i.mu.Unlock()
 
 	select {
+	case <-i.stopper.ShouldStop():
+		return "", errors.New("stopping")
 	case blockHash := <-validateNumWaiter.done:
 		return blockHash, nil
 	case err := <-validateNumWaiter.err:

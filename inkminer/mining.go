@@ -159,6 +159,7 @@ func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
 					err:      err,
 				}
 			}
+			continue
 		}
 	}
 
