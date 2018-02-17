@@ -98,8 +98,8 @@ func NewTestCluster(t *testing.T, nodes int) *TestCluster {
 			MinNumMinerConnections: uint8(min),
 			HeartBeat:              heartbeatTime,
 			GenesisBlockHash:       "genesis!",
-			InkPerOpBlock:          20,
-			InkPerNoOpBlock:        5,
+			InkPerOpBlock:          200,
+			InkPerNoOpBlock:        50,
 			CanvasSettings: server.CanvasSettings{
 				CanvasXMax: 1000000000,
 				CanvasYMax: 1000000000,

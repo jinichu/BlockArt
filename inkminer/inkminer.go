@@ -47,6 +47,8 @@ type InkMiner struct {
 		currentHead blockartlib.Block
 		// states of the canvas at a given block
 		states map[string]State
+		// opErrors counts the first BlockNum a transaction errors on.
+		opErrors map[string]opError
 
 		validateNumMap map[string]ValidateNumWaiter
 
@@ -87,8 +89,10 @@ func New(privKey *ecdsa.PrivateKey) (*InkMiner, error) {
 	i.mu.blockchain = make(map[string]blockartlib.Block)
 	i.mu.mempool = make(map[string]blockartlib.Operation)
 	i.mu.peers = make(map[string]*peer)
-	i.privKey = privKey
 	i.mu.validateNumMap = make(map[string]ValidateNumWaiter)
+	i.mu.opErrors = make(map[string]opError)
+
+	i.privKey = privKey
 
 	i.log = log.New(os.Stderr, "", log.Flags()|log.Lshortfile)
 

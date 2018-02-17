@@ -74,7 +74,10 @@ func (i *InkMinerRPC) AddShape(req *blockartlib.Operation, resp *blockartlib.Add
 	if err != nil {
 		return err
 	}
-	blockHash := i.i.waitForValidateNum(opHash, req.ValidateNum)
+	blockHash, err := i.i.waitForValidateNum(opHash, req.ValidateNum)
+	if err != nil {
+		return err
+	}
 
 	state, err := i.i.CalculateState(i.i.currentHead())
 	if err != nil {
@@ -139,7 +142,9 @@ func (i *InkMinerRPC) DeleteShape(req *blockartlib.Operation, resp *uint32) erro
 		return err
 	}
 
-	i.i.waitForValidateNum(opHash, req.ValidateNum)
+	if _, err := i.i.waitForValidateNum(opHash, req.ValidateNum); err != nil {
+		return err
+	}
 
 	state, err := i.i.CalculateState(i.i.currentHead())
 	if err != nil {
@@ -204,16 +209,21 @@ func (i *InkMinerRPC) GetChildrenBlocks(req *string, resp *blockartlib.GetChildr
 	return blockartlib.InvalidBlockHashError(*req)
 }
 
-func (i *InkMiner) waitForValidateNum(opHash string, validateNum uint8) string {
-	i.mu.Lock()
+func (i *InkMiner) waitForValidateNum(opHash string, validateNum uint8) (string, error) {
 	validateNumWaiter := ValidateNumWaiter{
 		done:        make(chan string),
+		err:         make(chan error),
 		validateNum: validateNum,
 	}
+
+	i.mu.Lock()
 	i.mu.validateNumMap[opHash] = validateNumWaiter
 	i.mu.Unlock()
 
-	blockHash := <-validateNumWaiter.done
-
-	return blockHash
+	select {
+	case blockHash := <-validateNumWaiter.done:
+		return blockHash, nil
+	case err := <-validateNumWaiter.err:
+		return "", err
+	}
 }

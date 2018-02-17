@@ -105,6 +105,11 @@ func (i *InkMiner) getStateForHash(hash string) (State, error) {
 	return state, nil
 }
 
+type opError struct {
+	blockNum int
+	err      error
+}
+
 func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
 
 	prevBlockHash, _, err := i.BlockWithLongestChain()
@@ -131,10 +136,29 @@ func (i *InkMiner) generateNewMiningBlock() (blockartlib.Block, error) {
 			continue
 		}
 
+		// check to see if there have been ValidateNum blocks that have been unable
+		// to include the operation. If there have been, send an error to the waiter
+		// if it exists.
+		firstError, ok := i.mu.opErrors[hash]
+		if ok && (firstError.blockNum+int(op.ValidateNum) < block.BlockNum) {
+			waiter, ok := i.mu.validateNumMap[hash]
+			if ok {
+				delete(i.mu.validateNumMap, hash)
+				waiter.err <- firstError.err
+			}
+			continue
+		}
+
 		block.Records = append(block.Records, op)
 		if _, err := i.TransformState(state, block); err != nil {
 			i.log.Printf("op can't be applied to block: %+v, %+v", op, err)
 			block.Records = block.Records[:len(block.Records)-1]
+			if !ok {
+				i.mu.opErrors[hash] = opError{
+					blockNum: block.BlockNum,
+					err:      err,
+				}
+			}
 		}
 	}
 
