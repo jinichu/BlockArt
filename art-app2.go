@@ -1,12 +1,3 @@
-/*
-
-A trivial application to illustrate how the blockartlib library can be
-used from an application in project 1 for UBC CS 416 2017W2.
-
-Usage:
-go run art-app.go
-*/
-
 package main
 
 // Expects blockartlib.go to be in the ./blockartlib/ dir, relative to

@@ -1,12 +1,3 @@
-/*
-
-A trivial application to illustrate how the blockartlib library can be
-used from an application in project 1 for UBC CS 416 2017W2.
-
-Usage:
-go run art-app.go
-*/
-
 package main
 
 // Expects blockartlib.go to be in the ./blockartlib/ dir, relative to
@@ -49,6 +40,12 @@ func run() error {
 
 	validateNum := uint8(2)
 
+	ink0, err := canvas.GetInk()
+	if err != nil {
+		return err
+	}
+	log.Printf("Current ink level for this miner: %d", ink0)
+
 	log.Printf("Add blue triangle")
 
 	// Add a blue line.
@@ -90,17 +87,20 @@ func run() error {
 
 	canvasShapes, _, err := GetCanvas(genesisBlockHash, canvas, 0)
 
-	htmlString := fmt.Sprintf(`<html><svg viewbox="0 0 %s %s">`, settings.CanvasXMax, settings.CanvasYMax)
+	htmlString := fmt.Sprintf(`<html><svg viewbox="0 0 %d %d">`, settings.CanvasXMax, settings.CanvasYMax)
 	for i := 0; i < len(canvasShapes); i++ {
 		htmlString += canvasShapes[i]
 	}
 	htmlString += "</svg></html>"
 
+	log.Printf("Closing canvas")
 	// Close the canvas.
 	ink5, err := canvas.CloseCanvas()
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Current ink level for this miner: %d", ink5)
 
 	log.Printf("Writing to html file")
 	err = ioutil.WriteFile("canvas.html", []byte(htmlString), 0755)
@@ -118,7 +118,6 @@ func run() error {
 	_ = ink2
 	_ = ink3
 	_ = ink4
-	_ = ink5
 
 	return nil
 }
