@@ -202,10 +202,15 @@ func (i *InkMiner) mineWorker(block blockartlib.Block, oldNonce uint32, maxItera
 		difficulty = i.settings.PoWDifficultyNoOpBlock
 	}
 
+	hashNoNonce, err := block.HashNoNonce()
+	if err != nil {
+		return 0, false, err
+	}
+
 	for i := 0; i < maxIterations; i++ {
 		oldNonce += 1
 		block.Nonce = oldNonce
-		hash, err := block.Hash()
+		hash, err := block.HashApplyNonce(hashNoNonce)
 		if err != nil {
 			return 0, false, err
 		}
@@ -388,7 +393,7 @@ func (i *InkMiner) TransformState(prev State, block blockartlib.Block) (State, e
 		if _, ok := createdState.commitedOperations[opHash]; ok {
 			return State{}, fmt.Errorf("operation has already been committed! %+v", opHash)
 		}
-		createdState.commitedOperations[opHash] = 1
+		createdState.commitedOperations[opHash] = 0
 
 		pubkey, err := op.PubKeyString()
 		if err != nil {

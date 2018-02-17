@@ -8,6 +8,9 @@ import (
 	_ "image/jpeg"
 	"log"
 	"os"
+	"strings"
+	"sync"
+	"time"
 
 	"./blockartlib"
 	"./crypto"
@@ -17,6 +20,7 @@ var (
 	minerAddr = flag.String("miner", "127.0.0.1:8080", "the address of the miner to connect to")
 	public    = flag.String("public", "testkeys/test1-public.key", "public key file")
 	private   = flag.String("private", "testkeys/test1-private.key", "private key file")
+	img       = flag.String("f", "testdata/ivanb.jpg", "the image to render")
 )
 
 func main() {
@@ -28,10 +32,10 @@ func main() {
 	}
 }
 
-func webColor(c color.Color) {
+func webColor(c color.Color) string {
 	r, g, b, a := c.RGBA()
 	const max = 0xffff
-	return fmt.Sprintf("rgba(%f, %f, %f, %f)", float64(r)/max*255, float64(g)/max*255, float64(b)/max*255, float64(a)/max)
+	return fmt.Sprintf("rgba(%d, %d, %d, %f)", int(float64(r)/max*255), int(float64(g)/max*255), int(float64(b)/max*255), float64(a)/max)
 }
 
 func run() error {
@@ -41,29 +45,76 @@ func run() error {
 	}
 
 	// Open a canvas.
-	canvas, settings, err := blockartlib.OpenCanvas(*minerAddr, *privKey)
+	canvas, _, err := blockartlib.OpenCanvas(*minerAddr, *privKey)
 	if err != nil {
 		return err
 	}
 
-	reader, err := os.Open("testdata/ivanb.jpeg")
+	reader, err := os.Open(*img)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 
-	img, err := image.Decode(reader)
+	img, _, err := image.Decode(reader)
 	if err != nil {
 		return err
 	}
 
 	bounds := img.Bounds()
 
-	for x := bounds.Min.X; x < bounds.Max.X; x++ {
-		for y := bounds.Min.Y; x < bounds.Max.Y; y++ {
-			color := img.At(x, y)
-			//"M 402 300 v 1 h 1 v -1 Z",
-			_ = color
+	margin := 100
+
+	const workers = 128
+
+	type work struct {
+		path, fill, stroke string
+	}
+
+	workChan := make(chan work, workers)
+	var wg sync.WaitGroup
+
+	log.Printf("spinning up %d workers", workers)
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for w := range workChan {
+				for {
+					if _, _, _, err := canvas.AddShape(0, blockartlib.PATH, w.path, w.fill, w.stroke); err != nil {
+						if strings.HasPrefix(err.Error(), "BlockArt: Not enough ink to addShape") {
+							log.Printf("%q: sleeping... %s", w.path, err)
+							time.Sleep(1 * time.Second)
+							continue
+						} else {
+							log.Fatal(err)
+						}
+					}
+					break
+				}
+			}
+		}()
+	}
+
+	const stride = 4
+
+	for x := bounds.Min.X; x < bounds.Max.X; x += stride {
+		for y := bounds.Min.Y; y < bounds.Max.Y; y += stride {
+			log.Printf("drawing %d x %d", x, y)
+			color := webColor(img.At(x, y))
+			path := fmt.Sprintf("M %d %d v %d h %d v -%d Z", margin+x, margin+y, stride, stride, stride)
+			workChan <- work{
+				path:   path,
+				fill:   color,
+				stroke: color,
+			}
 		}
 	}
+
+	close(workChan)
+	wg.Wait()
+
+	return nil
 }

@@ -392,7 +392,8 @@ func (i *InkMiner) AddBlock(block blockartlib.Block) (success bool, err error) {
 	} else {
 		i.mu.Lock()
 		for opHash, validateNumWaiter := range i.mu.validateNumMap {
-			if state.commitedOperations[opHash] >= int(validateNumWaiter.validateNum) {
+			validateNum, ok := state.commitedOperations[opHash]
+			if ok && validateNum >= int(validateNumWaiter.validateNum) {
 				var blockHash string
 				currentBlock := block
 				for j := 0; j < int(validateNumWaiter.validateNum); j++ {

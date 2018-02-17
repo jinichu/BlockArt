@@ -2,8 +2,10 @@ package blockartlib
 
 import (
 	"crypto/ecdsa"
-
-	crypto "../crypto"
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
+	"strconv"
 )
 
 type Block struct {
@@ -14,6 +16,26 @@ type Block struct {
 	Nonce     uint32
 }
 
+func (b Block) HashNoNonce() ([]byte, error) {
+	b.Nonce = 0
+	hash := md5.New()
+	if err := json.NewEncoder(hash).Encode(b); err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
+}
+
+func (b Block) HashApplyNonce(noNonceHash []byte) (string, error) {
+	hash := md5.New()
+	hash.Write(noNonceHash)
+	hash.Write([]byte(strconv.Itoa(int(b.Nonce))))
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
 func (b Block) Hash() (string, error) {
-	return crypto.Hash(b)
+	noNonceHash, err := b.HashNoNonce()
+	if err != nil {
+		return "", err
+	}
+	return b.HashApplyNonce(noNonceHash)
 }

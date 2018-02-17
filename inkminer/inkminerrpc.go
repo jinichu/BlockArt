@@ -2,6 +2,7 @@ package inkminer
 
 import (
 	"fmt"
+	"log"
 
 	"../blockartlib"
 	server "../server"
@@ -26,6 +27,10 @@ func (i *InkMinerRPC) InitConnection(req blockartlib.InitConnectionRequest, resp
 }
 
 func (i *InkMiner) testOperation(op blockartlib.Operation) error {
+	if err := i.validateOp(op); err != nil {
+		return err
+	}
+
 	block := i.currentHead()
 	blockHash, err := block.Hash()
 	if err != nil {
@@ -37,6 +42,8 @@ func (i *InkMiner) testOperation(op blockartlib.Operation) error {
 		return err
 	}
 
+	log.Printf("CalculateState Passed! %+v", op)
+
 	testBlock := blockartlib.Block{
 		PrevBlock: blockHash,
 		BlockNum:  block.BlockNum + 1,
@@ -44,8 +51,11 @@ func (i *InkMiner) testOperation(op blockartlib.Operation) error {
 		Records:   []blockartlib.Operation{op},
 	}
 	if _, err := i.TransformState(state, testBlock); err != nil {
+		log.Printf("TransformState failed!")
 		return err
 	}
+
+	log.Printf("TransformState Passed! %+v", op)
 
 	return nil
 }
