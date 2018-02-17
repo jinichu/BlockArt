@@ -65,7 +65,7 @@ func run() error {
 
 	margin := 100
 
-	const workers = 32
+	const workers = 128
 
 	type work struct {
 		path, fill, stroke string
@@ -98,7 +98,7 @@ func run() error {
 		}()
 	}
 
-	const stride = 8
+	const stride = 4
 
 	for x := bounds.Min.X; x < bounds.Max.X; x += stride {
 		for y := bounds.Min.Y; y < bounds.Max.Y; y += stride {
