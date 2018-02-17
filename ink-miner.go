@@ -1,15 +1,17 @@
 package main
 
 import (
+	"flag"
 	"log"
-	"os"
 
 	"./crypto"
 	"./inkminer"
 )
 
 func main() {
-	args := os.Args[1:]
+	flag.Parse()
+
+	args := flag.Args()
 	if len(args) != 3 {
 		log.Fatal("inkminer <server addr> <public key file> <private key file>")
 	}

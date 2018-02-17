@@ -2,6 +2,7 @@ package inkminer
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -13,6 +14,8 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+
+	flag.DurationVar(&TestBlockDelay, "delay", 1*time.Second, "mining block delay")
 }
 
 // BlockDepth returns the block depth for the given hash. It also memoizes the
