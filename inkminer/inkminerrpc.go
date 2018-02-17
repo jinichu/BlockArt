@@ -3,7 +3,6 @@ package inkminer
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"../blockartlib"
 	server "../server"
@@ -43,8 +42,6 @@ func (i *InkMiner) testOperation(op blockartlib.Operation) error {
 		return err
 	}
 
-	log.Printf("CalculateState Passed! %+v", op)
-
 	testBlock := blockartlib.Block{
 		PrevBlock: blockHash,
 		BlockNum:  block.BlockNum + 1,
@@ -52,11 +49,8 @@ func (i *InkMiner) testOperation(op blockartlib.Operation) error {
 		Records:   []blockartlib.Operation{op},
 	}
 	if _, err := i.TransformState(state, testBlock); err != nil {
-		log.Printf("TransformState failed!")
 		return err
 	}
-
-	log.Printf("TransformState Passed! %+v", op)
 
 	return nil
 }
